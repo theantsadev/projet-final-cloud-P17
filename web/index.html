@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Carte Offline – Antananarivo</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1️⃣ Initialisation de la carte (centre : Antananarivo)
+        const map = L.map('map').setView([-18.8985, 47.5245], 12);
+
+
+        L.tileLayer('http://localhost:8080/styles/basic-preview/512/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            tileSize: 512,          // important pour la plupart des styles TileServer-GL
+            zoomOffset: -1,         // souvent nécessaire avec tileSize 512
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // 3️⃣ Interaction : clic pour ajouter un marqueur
+        map.on('click', function (e) {
+            L.marker(e.latlng)
+                .addTo(map)
+                .bindPopup(
+                    `Latitude : ${e.latlng.lat}<br>Longitude : ${e.latlng.lng}`
+                )
+                .openPopup();
+        });
+    </script>
+
+</body>
+
+</html>
