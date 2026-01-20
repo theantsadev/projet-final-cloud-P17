@@ -95,7 +95,6 @@ function RegisterPage() {
   return (
     <div className="auth-card">
       <div className="auth-header">
-        <div className="auth-logo">🚧</div>
         <h1 className="auth-title">Créer un compte</h1>
         <p className="auth-subtitle">
           Rejoignez la communauté et participez au suivi des travaux
@@ -104,7 +103,7 @@ function RegisterPage() {
 
       {error && (
         <div className="alert alert-danger">
-          <span>⚠️</span>
+          <span></span>
           <span>{error}</span>
         </div>
       )}
@@ -185,9 +184,9 @@ function RegisterPage() {
             <option value="manager">Manager - Gestion complète</option>
           </select>
           <small className="text-muted text-small mt-1" style={{ display: 'block' }}>
-            {formData.role === 'visitor' && '👁️ Accès en lecture seule à la carte des travaux'}
-            {formData.role === 'user' && '📝 Peut signaler et suivre ses propres signalements'}
-            {formData.role === 'manager' && '⚙️ Accès complet à l\'administration'}
+            {formData.role === 'visitor' && ' Accès en lecture seule à la carte des travaux'}
+            {formData.role === 'user' && ' Peut signaler et suivre ses propres signalements'}
+            {formData.role === 'manager' && ' Accès complet à l\'administration'}
           </small>
         </div>
 

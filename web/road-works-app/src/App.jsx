@@ -16,7 +16,8 @@ import ManagerDashboard from './pages/dashboards/ManagerDashboard'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user } = useAuthStore()
+  const { user, token } = useAuthStore()
+  const isAuthenticated = !!token && !!user
   
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />
@@ -37,7 +38,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 // Public Route (redirect if authenticated)
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, user } = useAuthStore()
+  const { user, token } = useAuthStore()
+  const isAuthenticated = !!token && !!user
   
   if (isAuthenticated) {
     const roleRedirects = {

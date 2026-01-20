@@ -48,7 +48,11 @@ function LoginPage() {
           user: '/user',
           manager: '/manager'
         }
-        navigate(redirects[result.user.role] || '/visitor')
+        
+        // Use setTimeout to ensure state is updated before navigation
+        setTimeout(() => {
+          navigate(redirects[result.user.role] || '/visitor', { replace: true })
+        }, 100)
       }
     } catch (err) {
       toast.error(err.message || 'Erreur de connexion')
@@ -66,14 +70,18 @@ function LoginPage() {
         user: '/user',
         manager: '/manager'
       }
-      navigate(redirects[role])
+      
+      // Use setTimeout to ensure state is updated before navigation
+      setTimeout(() => {
+        navigate(redirects[role], { replace: true })
+      }, 100)
     }
   }
 
   return (
     <div className="auth-card">
       <div className="auth-header">
-        <div className="auth-logo">🚧</div>
+        <div className="auth-logo"></div>
         <h1 className="auth-title">Connexion</h1>
         <p className="auth-subtitle">
           Accédez à votre espace de suivi des travaux routiers
@@ -159,7 +167,7 @@ function LoginPage() {
             onClick={() => handleQuickLogin('visitor')}
             disabled={isLoading}
           >
-            👁️ Visiteur
+             Visiteur
           </button>
           <button 
             type="button"
@@ -167,7 +175,7 @@ function LoginPage() {
             onClick={() => handleQuickLogin('user')}
             disabled={isLoading}
           >
-            👤 Utilisateur
+             Utilisateur
           </button>
           <button 
             type="button"
@@ -175,7 +183,7 @@ function LoginPage() {
             onClick={() => handleQuickLogin('manager')}
             disabled={isLoading}
           >
-            👔 Manager
+             Manager
           </button>
         </div>
       </div>
