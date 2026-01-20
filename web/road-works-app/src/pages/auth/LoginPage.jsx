@@ -81,7 +81,6 @@ function LoginPage() {
   return (
     <div className="auth-card">
       <div className="auth-header">
-        <div className="auth-logo"></div>
         <h1 className="auth-title">Connexion</h1>
         <p className="auth-subtitle">
           Accédez à votre espace de suivi des travaux routiers
