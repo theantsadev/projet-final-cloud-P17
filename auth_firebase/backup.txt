@@ -1,0 +1,46 @@
+package com.idp.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                // Désactiver CSRF pour API REST
+                .csrf(csrf -> csrf.disable())
+
+                // Configuration des autorisations
+                .authorizeHttpRequests(auth -> auth
+                        // Endpoints publics
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/config/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/api-docs/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+
+                        // Endpoints utilisateurs nécessitant authentification
+                        .requestMatchers("/api/users/**").authenticated()
+
+                        // Tout le reste nécessite authentification
+                        .anyRequest().authenticated())
+
+                // Session stateless pour API REST
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Désactiver l'authentification Basic par défaut
+                .httpBasic(httpBasic -> httpBasic.disable());
+
+        return http.build();
+    }
+}
