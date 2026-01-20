@@ -47,7 +47,7 @@ function MainLayout() {
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-logo">🚧</div>
+          <div className="sidebar-logo"></div>
           <div className="sidebar-brand">
             <h1>Travaux Routiers</h1>
             <span>Antananarivo</span>
@@ -64,7 +64,7 @@ function MainLayout() {
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span className="nav-link-icon">🗺️</span>
+              <span className="nav-link-icon"></span>
               <span className="nav-link-text">Carte des Travaux</span>
             </NavLink>
 
@@ -75,7 +75,7 @@ function MainLayout() {
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="nav-link-icon">📝</span>
+                <span className="nav-link-icon"></span>
                 <span className="nav-link-text">Mes Signalements</span>
               </NavLink>
             )}
@@ -87,7 +87,7 @@ function MainLayout() {
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="nav-link-icon">⚙️</span>
+                <span className="nav-link-icon"></span>
                 <span className="nav-link-text">Administration</span>
               </NavLink>
             )}
@@ -96,7 +96,7 @@ function MainLayout() {
           <div className="nav-section">
             <div className="nav-section-title">Statistiques</div>
             <div className="nav-link" style={{ cursor: 'default' }}>
-              <span className="nav-link-icon">📊</span>
+              <span className="nav-link-icon"></span>
               <span className="nav-link-text">Vue d'ensemble</span>
             </div>
           </div>
@@ -112,7 +112,7 @@ function MainLayout() {
               <div className="user-role">{getRoleBadge(user?.role)}</div>
             </div>
             <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
-              🚪
+              
             </button>
           </div>
         </div>
@@ -132,7 +132,7 @@ function MainLayout() {
                 }
               }}
             >
-              ☰
+              
             </button>
             <h2 className="page-title">{getPageTitle()}</h2>
           </div>
