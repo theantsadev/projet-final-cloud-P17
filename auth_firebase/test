@@ -1,0 +1,93 @@
+#!/bin/bash
+# test_all_swagger_endpoints.sh
+
+echo "=== TEST DE TOUS LES ENDPOINTS DOCUMENTÉS DANS SWAGGER ==="
+echo ""
+
+BASE_URL="http://localhost:8080"
+
+# 1. AUTH - REGISTER (Firebase)
+echo "1. 🔐 POST /api/auth/register (Firebase):"
+curl -s -X POST "http://localhost:8080/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"dom@test.com","password":"dom123","fullName":"Swagger User"}'
+
+echo -e "\n"
+
+# 2. AUTH - LOGIN
+echo "2. 🔐 POST /api/auth/login:"
+curl -s -X POST "http://localhost:8080/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"swagger@test.com","password":"Swagger123"}'
+
+echo -e "\n"
+
+# 3. AUTH - CHECK LOCK
+echo "3. 🔐 GET /api/auth/check-lock/{email}:"
+curl -s "$BASE_URL/api/auth/check-lock/swagger@test.com"
+
+echo -e "\n"
+
+# 4. USERS - GET BY ID (supposons ID=4)
+echo "4. 👤 GET /api/users/{id}:"
+curl -s "$BASE_URL/api/users/4"
+
+echo -e "\n"
+
+# 5. USERS - UPDATE
+echo "5. 👤 PUT /api/users/{id}:"
+curl -s -X PUT "$BASE_URL/api/users/4" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"updated.swagger@test.com","fullName":"Updated Swagger"}'
+
+echo -e "\n"
+
+# 6. USERS - UNBLOCK
+echo "6. 👤 POST /api/users/unblock/{email}:"
+curl -s -X POST "$BASE_URL/api/users/unblock/swagger@test.com"
+
+echo -e "\n"
+
+# 7. USERS - BLOCK
+echo "7. 👤 POST /api/users/block/{email}:"
+curl -s -X POST "$BASE_URL/api/users/block/swagger@test.com"
+
+echo -e "\n"
+
+# 8. CONFIG - GET SESSION
+echo "8. ⚙️ GET /api/config/session:"
+curl -s "$BASE_URL/api/config/session"
+
+echo -e "\n"
+
+# 9. CONFIG - GET TIMEOUT
+echo "9. ⚙️ GET /api/config/session/timeout:"
+curl -s "$BASE_URL/api/config/session/timeout"
+
+echo -e "\n"
+
+# 10. CONFIG - GET ATTEMPTS
+echo "10. ⚙️ GET /api/config/session/attempts:"
+curl -s "$BASE_URL/api/config/session/attempts"
+
+echo -e "\n"
+
+# 11. CONFIG - UPDATE TIMEOUT
+echo "11. ⚙️ PUT /api/config/session/timeout:"
+curl -s -X PUT "$BASE_URL/api/config/session/timeout?minutes=120"
+
+echo -e "\n"
+
+# 12. CONFIG - UPDATE ATTEMPTS
+echo "12. ⚙️ PUT /api/config/session/attempts:"
+curl -s -X PUT "$BASE_URL/api/config/session/attempts?attempts=8"
+
+echo -e "\n"
+
+echo "=== VÉRIFICATION FINALE ==="
+curl -s "$BASE_URL/api/config/session"
+
+echo -e "\n\n=== SWAGGER UI ==="
+echo "Accédez à la documentation complète:"
+echo "📚 Swagger UI: $BASE_URL/swagger-ui.html"
+echo "📄 OpenAPI JSON: $BASE_URL/api-docs"
