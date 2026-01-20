@@ -12,9 +12,10 @@ export const useAuthStore = create(
       isLoading: false,
       error: null,
 
-      // Computed-like getters
-      get isAuthenticated() {
-        return !!get().token && !!get().user
+      // Check if authenticated (function instead of getter for better reactivity)
+      isAuthenticated: () => {
+        const state = get()
+        return !!state.token && !!state.user
       },
 
       // Actions

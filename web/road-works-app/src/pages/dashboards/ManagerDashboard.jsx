@@ -144,13 +144,13 @@ function ManagerDashboard() {
 
   const getTypeIcon = (type) => {
     const icons = {
-      'pothole': '🕳️',
-      'flooding': '🌊',
-      'signage': '🚧',
-      'lighting': '💡',
-      'other': '📍'
+      'pothole': '■',
+      'flooding': '▲',
+      'signage': '◆',
+      'lighting': '☆',
+      'other': '●'
     }
-    return icons[type] || '📍'
+    return icons[type] || '●'
   }
 
   // Donut chart data
@@ -168,7 +168,9 @@ function ManagerDashboard() {
       {/* Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon primary">📊</div>
+          <div className="stat-icon primary">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+          </div>
           <div className="stat-content">
             <div className="stat-label">Total Signalements</div>
             <div className="stat-value">{stats.totalReports}</div>
@@ -176,7 +178,9 @@ function ManagerDashboard() {
         </div>
         
         <div className="stat-card">
-          <div className="stat-icon danger">🚨</div>
+          <div className="stat-icon danger">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
           <div className="stat-content">
             <div className="stat-label">Haute Priorité</div>
             <div className="stat-value">{stats.highPriority}</div>
@@ -184,7 +188,9 @@ function ManagerDashboard() {
         </div>
         
         <div className="stat-card">
-          <div className="stat-icon warning">⏳</div>
+          <div className="stat-icon warning">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+          </div>
           <div className="stat-content">
             <div className="stat-label">En Attente</div>
             <div className="stat-value">{stats.pendingReports}</div>
@@ -192,7 +198,9 @@ function ManagerDashboard() {
         </div>
         
         <div className="stat-card">
-          <div className="stat-icon info">👥</div>
+          <div className="stat-icon info">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
           <div className="stat-content">
             <div className="stat-label">Utilisateurs</div>
             <div className="stat-value">{stats.totalUsers}</div>
@@ -205,7 +213,7 @@ function ManagerDashboard() {
         {/* Chart & Quick Stats */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">📈 Répartition des Signalements</h3>
+            <h3 className="card-title">Répartition des Signalements</h3>
           </div>
           <div className="card-body">
             <div className="donut-chart">
@@ -254,7 +262,7 @@ function ManagerDashboard() {
         {/* Top Contributors */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">🏆 Top Contributeurs</h3>
+            <h3 className="card-title">Top Contributeurs</h3>
           </div>
           <div className="card-body" style={{ padding: 0 }}>
             <ul className="list-group">
@@ -271,7 +279,7 @@ function ManagerDashboard() {
                         fontWeight: 'bold'
                       }}
                     >
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                      {index === 0 ? '' : index === 1 ? '' : index === 2 ? '' : index + 1}
                     </div>
                     <div className="list-item-content">
                       <div className="list-item-title">{user.name}</div>
@@ -293,17 +301,17 @@ function ManagerDashboard() {
               className={`tab ${activeTab === 'reports' ? 'active' : ''}`}
               onClick={() => setActiveTab('reports')}
             >
-              📋 Signalements ({reports.length})
+              Signalements ({reports.length})
             </button>
             <button 
               className={`tab ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
             >
-              👥 Utilisateurs ({users.length})
+              Utilisateurs ({users.length})
             </button>
           </div>
           <div className="search-box" style={{ width: '300px' }}>
-            <span className="search-box-icon">🔍</span>
+            <span className="search-box-icon"></span>
             <input 
               type="text" 
               placeholder="Rechercher..."
@@ -363,13 +371,13 @@ function ManagerDashboard() {
                         <td>{new Date(report.createdAt).toLocaleDateString('fr-FR')}</td>
                         <td>
                           <div className="flex gap-1">
-                            <button className="btn btn-secondary btn-sm" title="Voir">👁️</button>
+                            <button className="btn btn-secondary btn-sm" title="Voir">Voir</button>
                             <button 
                               className="btn btn-danger btn-sm" 
                               title="Supprimer"
                               onClick={() => deleteReport(report.id)}
                             >
-                              🗑️
+                              Suppr.
                             </button>
                           </div>
                         </td>
@@ -380,7 +388,7 @@ function ManagerDashboard() {
               </table>
               {filteredReports.length === 0 && (
                 <div className="empty-state">
-                  <div className="empty-state-icon">🔍</div>
+                  <div className="empty-state-icon" style={{ fontSize: '2rem', color: '#94a3b8' }}>⌕</div>
                   <div className="empty-state-title">Aucun résultat</div>
                   <p>Aucun signalement ne correspond à votre recherche.</p>
                 </div>
@@ -432,9 +440,9 @@ function ManagerDashboard() {
                         <td>{new Date(u.createdAt).toLocaleDateString('fr-FR')}</td>
                         <td>
                           <div className="flex gap-1">
-                            <button className="btn btn-secondary btn-sm" title="Voir le profil">👤</button>
+                            <button className="btn btn-secondary btn-sm" title="Voir le profil">Profil</button>
                             {u.role !== 'manager' && (
-                              <button className="btn btn-danger btn-sm" title="Désactiver">🚫</button>
+                              <button className="btn btn-danger btn-sm" title="Désactiver">Désact.</button>
                             )}
                           </div>
                         </td>
@@ -445,7 +453,7 @@ function ManagerDashboard() {
               </table>
               {filteredUsers.length === 0 && (
                 <div className="empty-state">
-                  <div className="empty-state-icon">🔍</div>
+                  <div className="empty-state-icon"></div>
                   <div className="empty-state-title">Aucun résultat</div>
                   <p>Aucun utilisateur ne correspond à votre recherche.</p>
                 </div>
