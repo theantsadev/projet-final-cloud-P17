@@ -6,6 +6,7 @@ import com.idp.dto.AuthResponse;
 import com.idp.dto.RegisterRequest;
 import com.idp.model.User;
 import com.idp.repository.UserRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,46 @@ public class AuthService {
 
     @Autowired
     private IdpProperties idpProperties;
+
+    @Autowired
+    private ObjectProvider<AuthService> selfProvider; // Lazy resolution to avoid circular reference
+
+    /**
+     * Handle failed login attempt in a separate transaction
+     * This ensures the attempt count is saved even if the main transaction rolls back
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void handleFailedLoginAttempt(Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        
+        User user = userOpt.get();
+        user.setLoginAttempts(user.getLoginAttempts() + 1);
+        System.out.println("Login attempts: " + user.getLoginAttempts() + "/" + idpProperties.getMaxLoginAttempts());
+
+        if (user.getLoginAttempts() >= idpProperties.getMaxLoginAttempts()) {
+            user.setLocked(true);
+            System.out.println("Account LOCKED!");
+
+            // Disable Firebase account if applicable
+            if (user.getFirebaseUid() != null) {
+                try {
+                    System.out.println("Disabling Firebase account via Admin SDK...");
+                    firebaseAdminService.disableUser(user.getFirebaseUid());
+                    System.out.println("✓ Firebase account also disabled");
+                } catch (Exception ex) {
+                    System.err.println("✗ Failed to disable Firebase account via Admin SDK: " + ex.getMessage());
+                }
+            }
+        }
+
+        User savedUser = userRepository.save(user);
+        System.out.println("Updated user after failed login: ID=" + savedUser.getId()
+               + ", Locked=" + savedUser.isLocked()
+               + ", LoginAttempts=" + savedUser.getLoginAttempts());
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -271,31 +312,20 @@ public class AuthService {
             } catch (Exception e) {
                 System.out.println("Firebase authentication FAILED: " + e.getMessage());
 
-                // Handle failed login attempts
-                if (user != null) {
-                    user.setLoginAttempts(user.getLoginAttempts() + 1);
-                    System.out.println(
-                            "Login attempts: " + user.getLoginAttempts() + "/" + idpProperties.getMaxLoginAttempts());
+                // Handle failed login attempts ONLY for invalid credentials
+                // Not for network errors, disabled accounts, etc.
+                String errorMsg = e.getMessage();
+                boolean isInvalidCredentials = errorMsg != null && (
+                    errorMsg.contains("INVALID_LOGIN_CREDENTIALS") ||
+                    errorMsg.contains("INVALID_PASSWORD") ||
+                    errorMsg.contains("EMAIL_NOT_FOUND")
+                );
 
-                    if (user.getLoginAttempts() >= idpProperties.getMaxLoginAttempts()) {
-                        user.setLocked(true);
-                        System.out.println("Account LOCKED!");
-
-                        // ============ FIREBASE ADMIN SDK LOCK ============
-                        // Désactiver aussi dans Firebase via Admin SDK
-                        if (user.getFirebaseUid() != null) {
-                            try {
-                                System.out.println("Disabling Firebase account via Admin SDK...");
-                                firebaseAdminService.disableUser(user.getFirebaseUid());
-                                System.out.println("✓ Firebase account also disabled");
-                            } catch (Exception ex) {
-                                System.err.println(
-                                        "✗ Failed to disable Firebase account via Admin SDK: " + ex.getMessage());
-                            }
-                        }
-                        // ============ END FIREBASE ADMIN SDK LOCK ============
-                    }
-                    userRepository.save(user);
+                if (user != null && isInvalidCredentials) {
+                    System.out.println("Invalid credentials detected - incrementing failed login attempts");
+                    selfProvider.getObject().handleFailedLoginAttempt(user.getId());
+                } else if (user != null) {
+                    System.out.println("Non-credential error - not incrementing login attempts");
                 }
 
                 throw new RuntimeException("Authentication failed: " + e.getMessage());
@@ -309,15 +339,7 @@ public class AuthService {
                 System.out.println("Local authentication FAILED - Invalid credentials");
 
                 if (user != null) {
-                    user.setLoginAttempts(user.getLoginAttempts() + 1);
-                    System.out.println(
-                            "Login attempts: " + user.getLoginAttempts() + "/" + idpProperties.getMaxLoginAttempts());
-
-                    if (user.getLoginAttempts() >= idpProperties.getMaxLoginAttempts()) {
-                        user.setLocked(true);
-                        System.out.println("Account LOCKED!");
-                    }
-                    userRepository.save(user);
+                    selfProvider.getObject().handleFailedLoginAttempt(user.getId());
                 }
 
                 throw new RuntimeException("Invalid credentials");
