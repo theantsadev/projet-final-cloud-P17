@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
 })
 
 // Configuration du serveur de tuiles
-const TILE_SERVER_URL = 'http://localhost:8081'
+const TILE_SERVER_URL = 'http://localhost:8080'
 
 // Custom marker icons
 const createCustomIcon = (color) => {
@@ -108,6 +108,7 @@ function MapComponent({
         attribution: '© OpenStreetMap contributors | TileServer-GL',
         maxZoom: 19
       }).addTo(mapInstanceRef.current)
+      
     } else {
       // Fallback to OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
