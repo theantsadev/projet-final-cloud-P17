@@ -190,9 +190,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
+  onIonViewDidEnter,
   IonButton, IonIcon, IonFab, IonFabButton, IonModal, IonItem, IonLabel,
   IonInput, IonTextarea, IonSelect, IonSelectOption, IonCard, IonCardHeader,
   IonCardTitle, IonCardSubtitle, IonCardContent, IonChip, IonList,
@@ -271,7 +272,26 @@ const formatDate = (date: Date | string) => {
 const initMap = () => {
   if (!mapContainer.value) return
 
-  map = L.map(mapContainer.value).setView(ANTANANARIVO_CENTER, DEFAULT_ZOOM)
+  // Limites de Madagascar (bounds)
+  const madagascarBounds = L.latLngBounds(
+    L.latLng(-25.6, 43.2),  // Sud-Ouest
+    L.latLng(-11.9, 50.5)   // Nord-Est
+  )
+
+  // Limites d'Antananarivo et environs (pour zoom max)
+  const antananarivooBounds = L.latLngBounds(
+    L.latLng(-19.05, 47.4),  // Sud-Ouest
+    L.latLng(-18.75, 47.65)  // Nord-Est
+  )
+
+  map = L.map(mapContainer.value, {
+    center: ANTANANARIVO_CENTER,
+    zoom: DEFAULT_ZOOM,
+    minZoom: 6,           // Zoom minimum pour voir tout Madagascar
+    maxZoom: 18,          // Zoom maximum
+    maxBounds: madagascarBounds,        // Limiter le déplacement à Madagascar
+    maxBoundsViscosity: 1.0             // Empêcher complètement de sortir des limites
+  })
 
   // Tile layer OpenStreetMap
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -424,8 +444,29 @@ const submitSignalement = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  initMap()
+  // Attendre que le DOM soit prêt
+  await nextTick()
+  
+  // Petit délai pour s'assurer que le conteneur est rendu
+  setTimeout(() => {
+    initMap()
+    // Forcer le redimensionnement de la carte
+    if (map) {
+      map.invalidateSize()
+    }
+  }, 100)
+  
   await refreshSignalements()
+})
+
+// Quand la vue devient visible (important pour Ionic)
+onIonViewDidEnter(() => {
+  if (map) {
+    // Forcer le rafraîchissement de la carte quand on revient sur la page
+    setTimeout(() => {
+      map!.invalidateSize()
+    }, 100)
+  }
 })
 
 onUnmounted(() => {
