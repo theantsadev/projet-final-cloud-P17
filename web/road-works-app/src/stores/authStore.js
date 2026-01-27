@@ -29,13 +29,16 @@ export const useAuthStore = create(
           // Set token in API instance
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
           
-          // Determine role from email or response
-          // You may need to fetch user profile to get the role
-          let role = 'user' // default
-          if (email.includes('manager') || email.includes('admin')) {
+          // Determine role from response or default to visitor
+          // Backend returns roles array, map to frontend role
+          let role = 'visitor' // default
+          if (data.roles && data.roles.length > 0) {
+            // Check if user has MANAGER role
+            if (data.roles.some(r => r.name === 'MANAGER' || r === 'MANAGER')) {
+              role = 'manager'
+            }
+          } else if (email.includes('manager') || email.includes('admin')) {
             role = 'manager'
-          } else if (email.includes('visitor')) {
-            role = 'visitor'
           }
           
           const user = {
@@ -102,8 +105,7 @@ export const useAuthStore = create(
       quickLogin: (role) => {
         const users = {
           visitor: { id: '1', email: 'visitor@test.com', name: 'Visiteur Test', role: 'visitor' },
-          user: { id: '2', email: 'user@test.com', name: 'Utilisateur Test', role: 'user' },
-          manager: { id: '3', email: 'manager@test.com', name: 'Manager Test', role: 'manager' }
+          manager: { id: '2', email: 'manager@test.com', name: 'Manager Test', role: 'manager' }
         }
         
         const user = users[role]

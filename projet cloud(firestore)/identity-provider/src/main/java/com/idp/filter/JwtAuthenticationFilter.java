@@ -1,5 +1,8 @@
 package com.idp.filter;
 
+import com.idp.entity.Role;
+import com.idp.entity.User;
+import com.idp.repository.UserRepository;
 import com.idp.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -18,6 +22,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -37,12 +42,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String userId = jwtService.extractUserId(jwt);
 
-                // Créer l'authentification
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userId, null,
-                        null);
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                User user = userRepository.findById(userId).orElse(null);
+                if (user == null) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
-                // Mettre dans le contexte Spring Security
+                // Extract roles from Set<Role> and create authorities
+                java.util.List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
+                        .collect(java.util.stream.Collectors.toList());
+
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        authorities);
+
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } catch (Exception e) {
                 // Token invalide, continuer sans authentification

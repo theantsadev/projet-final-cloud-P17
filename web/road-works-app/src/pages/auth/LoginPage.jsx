@@ -45,7 +45,6 @@ function LoginPage() {
         // Redirect based on role
         const redirects = {
           visitor: '/visitor',
-          user: '/user',
           manager: '/manager'
         }
         
@@ -67,7 +66,6 @@ function LoginPage() {
       
       const redirects = {
         visitor: '/visitor',
-        user: '/user',
         manager: '/manager'
       }
       
@@ -166,15 +164,7 @@ function LoginPage() {
             onClick={() => handleQuickLogin('visitor')}
             disabled={isLoading}
           >
-             Visiteur
-          </button>
-          <button 
-            type="button"
-            className="btn btn-primary"
-            onClick={() => handleQuickLogin('user')}
-            disabled={isLoading}
-          >
-             Utilisateur
+            🌐 Mode Visiteur
           </button>
           <button 
             type="button"
@@ -182,7 +172,7 @@ function LoginPage() {
             onClick={() => handleQuickLogin('manager')}
             disabled={isLoading}
           >
-             Manager
+            👤 Manager
           </button>
         </div>
       </div>

@@ -65,24 +65,18 @@ export const authAPI = {
   checkLock: (email) => api.get(`/auth/check-lock/${email}`)
 }
 
-// Road Works API (to be implemented)
-export const roadWorksAPI = {
-  getAll: () => api.get('/road-works'),
-  getById: (id) => api.get(`/road-works/${id}`),
-  create: (data) => api.post('/road-works', data),
-  update: (id, data) => api.put(`/road-works/${id}`, data),
-  delete: (id) => api.delete(`/road-works/${id}`),
-  getByStatus: (status) => api.get(`/road-works/status/${status}`),
-  getStats: () => api.get('/road-works/stats')
+// Signalements API
+export const signalementAPI = {
+  getAll: () => api.get('/signalements'),
+  getById: (id) => api.get(`/signalements/${id}`),
+  getRecap: () => api.get('/signalements/recap'),
+  create: (data) => api.post('/signalements', data),
+  update: (id, data) => api.put(`/signalements/${id}`, data),
+  updateStatus: (id, statut) => api.put(`/signalements/${id}/status`, { statut })
 }
 
-// Reports API (for users)
-export const reportsAPI = {
-  getMyReports: () => api.get('/reports/my'),
-  create: (data) => api.post('/reports', data),
-  update: (id, data) => api.put(`/reports/${id}`, data),
-  delete: (id) => api.delete(`/reports/${id}`)
-}
+// Road Works API (alias for backward compatibility)
+export const roadWorksAPI = signalementAPI
 
 // Users API (for managers)
 export const usersAPI = {

@@ -11,7 +11,6 @@ import RegisterPage from './pages/auth/RegisterPage'
 
 // Dashboard Views
 import VisitorDashboard from './pages/dashboards/VisitorDashboard'
-import UserDashboard from './pages/dashboards/UserDashboard'
 import ManagerDashboard from './pages/dashboards/ManagerDashboard'
 
 // Protected Route Component
@@ -27,7 +26,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     // Redirect to appropriate dashboard based on role
     const roleRedirects = {
       visitor: '/visitor',
-      user: '/user',
       manager: '/manager'
     }
     return <Navigate to={roleRedirects[user?.role] || '/visitor'} replace />
@@ -44,7 +42,6 @@ const PublicRoute = ({ children }) => {
   if (isAuthenticated) {
     const roleRedirects = {
       visitor: '/visitor',
-      user: '/user',
       manager: '/manager'
     }
     return <Navigate to={roleRedirects[user?.role] || '/visitor'} replace />
@@ -66,22 +63,9 @@ function App() {
         <Route path="register" element={<RegisterPage />} />
       </Route>
 
-      {/* Visitor Dashboard - accessible to all authenticated users */}
-      <Route path="/visitor" element={
-        <ProtectedRoute allowedRoles={['visitor', 'user', 'manager']}>
-          <MainLayout />
-        </ProtectedRoute>
-      }>
+      {/* Visitor Dashboard - accessible to everyone (no authentication required) */}
+      <Route path="/visitor" element={<MainLayout />}>
         <Route index element={<VisitorDashboard />} />
-      </Route>
-
-      {/* User Dashboard */}
-      <Route path="/user" element={
-        <ProtectedRoute allowedRoles={['user', 'manager']}>
-          <MainLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<UserDashboard />} />
       </Route>
 
       {/* Manager Dashboard */}
@@ -94,8 +78,8 @@ function App() {
       </Route>
 
       {/* Default redirects */}
-      <Route path="/" element={<Navigate to="/auth/login" replace />} />
-      <Route path="*" element={<Navigate to="/auth/login" replace />} />
+      <Route path="/" element={<Navigate to="/visitor" replace />} />
+      <Route path="*" element={<Navigate to="/visitor" replace />} />
     </Routes>
   )
 }
