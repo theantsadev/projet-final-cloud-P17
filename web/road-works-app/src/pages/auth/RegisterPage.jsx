@@ -9,7 +9,7 @@ function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user'
+    role: 'visitor'
   })
   const [errors, setErrors] = useState({})
   const [acceptTerms, setAcceptTerms] = useState(false)
@@ -82,10 +82,9 @@ function RegisterPage() {
         // Redirect based on role
         const redirects = {
           visitor: '/visitor',
-          user: '/user',
           manager: '/manager'
         }
-        navigate(redirects[result.user.role] || '/user')
+        navigate(redirects[result.user.role] || '/visitor')
       }
     } catch (err) {
       toast.error(err.message || 'Erreur lors de l\'inscription')
@@ -179,14 +178,12 @@ function RegisterPage() {
             onChange={handleChange}
             disabled={isLoading}
           >
-            <option value="visitor">Visiteur - Consultation uniquement</option>
-            <option value="user">Utilisateur - Peut signaler des travaux</option>
+            <option value="visitor">Visiteur - Consultation publique</option>
             <option value="manager">Manager - Gestion complète</option>
           </select>
           <small className="text-muted text-small mt-1" style={{ display: 'block' }}>
-            {formData.role === 'visitor' && ' Accès en lecture seule à la carte des travaux'}
-            {formData.role === 'user' && ' Peut signaler et suivre ses propres signalements'}
-            {formData.role === 'manager' && ' Accès complet à l\'administration'}
+            {formData.role === 'visitor' && '🌐 Accès en lecture seule à la carte des signalements'}
+            {formData.role === 'manager' && '👤 Accès complet : gestion signalements, utilisateurs et synchronisation'}
           </small>
         </div>
 

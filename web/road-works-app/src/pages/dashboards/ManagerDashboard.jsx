@@ -67,10 +67,10 @@ function ManagerDashboard() {
   ])
 
   const [users, setUsers] = useState([
-    { id: 1, name: 'Jean Rakoto', email: 'jean@test.com', role: 'user', reportsCount: 5, createdAt: '2025-12-01' },
-    { id: 2, name: 'Marie Razafy', email: 'marie@test.com', role: 'user', reportsCount: 3, createdAt: '2025-12-15' },
+    { id: 1, name: 'Jean Rakoto', email: 'jean@test.com', role: 'visitor', reportsCount: 5, createdAt: '2025-12-01' },
+    { id: 2, name: 'Marie Razafy', email: 'marie@test.com', role: 'visitor', reportsCount: 3, createdAt: '2025-12-15' },
     { id: 3, name: 'Paul Andria', email: 'paul@test.com', role: 'visitor', reportsCount: 0, createdAt: '2026-01-01' },
-    { id: 4, name: 'Hery Rabe', email: 'hery@test.com', role: 'user', reportsCount: 8, createdAt: '2025-11-20' },
+    { id: 4, name: 'Hery Rabe', email: 'hery@test.com', role: 'visitor', reportsCount: 8, createdAt: '2025-11-20' },
     { id: 5, name: 'Admin', email: 'admin@test.com', role: 'manager', reportsCount: 2, createdAt: '2025-10-01' }
   ])
 

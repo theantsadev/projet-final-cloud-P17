@@ -54,4 +54,12 @@ public class User {
 
     @Column(name = "sync_status", length = 20)
     private String syncStatus = "PENDING";
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private java.util.Set<Role> roles = new java.util.HashSet<>();
 }

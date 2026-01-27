@@ -5,32 +5,36 @@ import { useAuthStore } from '../stores/authStore'
 function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { user, logout } = useAuthStore()
+  const { user, logout, isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
+    navigate('/visitor') // Redirect to visitor after logout
+  }
+
+  const handleLogin = () => {
     navigate('/auth/login')
   }
 
   const getInitials = (name) => {
-    if (!name) return 'U'
+    if (!name) return 'V'
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
   const getRoleBadge = (role) => {
     const badges = {
       visitor: 'Visiteur',
-      user: 'Utilisateur',
       manager: 'Manager'
     }
-    return badges[role] || role
+    return badges[role] || 'Visiteur'
   }
 
   const getPageTitle = () => {
+    if (!isAuthenticated()) return 'Carte des Signalements'
+    
     switch (user?.role) {
       case 'visitor': return 'Tableau de Bord Visiteur'
-      case 'user': return 'Mes Signalements'
       case 'manager': return 'Administration'
       default: return 'Tableau de Bord'
     }
@@ -113,19 +117,29 @@ function MainLayout() {
         <div className="sidebar-footer">
           <div className="user-menu">
             <div className="user-avatar">
-              {getInitials(user?.name)}
+              {isAuthenticated() ? getInitials(user?.name) : 'V'}
             </div>
             <div className="user-info">
-              <div className="user-name">{user?.name || 'Utilisateur'}</div>
-              <div className="user-role">{getRoleBadge(user?.role)}</div>
+              <div className="user-name">{isAuthenticated() ? user?.name : 'Visiteur'}</div>
+              <div className="user-role">{isAuthenticated() ? getRoleBadge(user?.role) : 'Non connecté'}</div>
             </div>
-            <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </button>
+            {isAuthenticated() ? (
+              <button className="logout-btn" onClick={handleLogout} title="Déconnexion">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            ) : (
+              <button className="logout-btn" onClick={handleLogin} title="Se connecter" style={{ background: '#10b981' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -149,9 +163,15 @@ function MainLayout() {
             <h2 className="page-title">{getPageTitle()}</h2>
           </div>
           <div className="header-right">
-            <span className={`badge badge-${user?.role}`}>
-              {getRoleBadge(user?.role)}
-            </span>
+            {isAuthenticated() ? (
+              <span className={`badge badge-${user?.role}`}>
+                {getRoleBadge(user?.role)}
+              </span>
+            ) : (
+              <span className="badge badge-visitor">
+                Mode Public
+              </span>
+            )}
           </div>
         </header>
 

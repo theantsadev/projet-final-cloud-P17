@@ -13,5 +13,6 @@ import java.util.Optional;
 @Repository
 public interface SecuritySettingRepository extends JpaRepository<SecuritySetting, Long> {
     Optional<SecuritySetting> findByKey(String key);
-     List<SecuritySetting> findBySyncStatus(String syncStatus);
+
+    List<SecuritySetting> findBySyncStatus(String syncStatus);
 }

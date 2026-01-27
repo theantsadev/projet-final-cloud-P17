@@ -4,6 +4,8 @@ import com.idp.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -19,6 +21,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -34,11 +37,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints publics (sans authentification)
                         .requestMatchers(
-                                "/api/auth/register", // Inscription
                                 "/api/auth/login", // Connexion
                                 "/api/auth/unlock", // Déblocage
-                                "/api/security/**", // Paramètres sécurité
-                                "/api/sync/**", // Synchronisation
 
                                 // Swagger/OpenAPI
                                 "/api/swagger-ui/**",
@@ -54,6 +54,17 @@ public class SecurityConfig {
                                 "/error",
                                 "/favicon.ico")
                         .permitAll()
+
+                        // Autoriser les GET publics sur les signalements (visiteur)
+                        .requestMatchers(HttpMethod.GET, "/api/signalements/**").permitAll()
+
+                        // Endpoints nécessitant le rôle MANAGER
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register").hasRole("MANAGER")
+                        .requestMatchers("/api/users/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/signalements/**").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/api/signalements/**").hasRole("MANAGER")
+                        .requestMatchers("/api/security/**").hasRole("MANAGER")
+                        .requestMatchers("/api/sync/**").hasRole("MANAGER")
 
                         // Tous les autres endpoints nécessitent une authentification
                         .anyRequest().authenticated())

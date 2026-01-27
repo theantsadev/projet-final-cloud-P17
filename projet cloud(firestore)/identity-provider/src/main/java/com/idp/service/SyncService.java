@@ -13,6 +13,7 @@ import com.idp.repository.LoginAttemptRepository;
 import com.idp.repository.SecuritySettingRepository; // ← AJOUTE SI TU L'AS CRÉÉ
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class SyncService {
 
@@ -34,6 +34,24 @@ public class SyncService {
     private final UserSessionRepository sessionRepository;
     private final LoginAttemptRepository loginAttemptRepository;
     private final SecuritySettingRepository securitySettingRepository;
+
+    @Autowired
+    public SyncService(
+            @Autowired(required = false) Firestore firestore,
+            UserRepository userRepository,
+            UserSessionRepository sessionRepository,
+            LoginAttemptRepository loginAttemptRepository,
+            SecuritySettingRepository securitySettingRepository) {
+        this.firestore = firestore;
+        this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
+        this.loginAttemptRepository = loginAttemptRepository;
+        this.securitySettingRepository = securitySettingRepository;
+
+        if (firestore == null) {
+            log.warn("⚠️ Firestore non disponible - sync désactivé");
+        }
+    }
 
     // Collections Firestore
     private static final String FIRESTORE_USERS_COLLECTION = "users";
