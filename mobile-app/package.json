@@ -12,6 +12,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/cli": "^8.0.1",
     "@capacitor/core": "8.0.1",
     "@ionic/vue": "^8.0.0",
     "@ionic/vue-router": "^8.0.0",

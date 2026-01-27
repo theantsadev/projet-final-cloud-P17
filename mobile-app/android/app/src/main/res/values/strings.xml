@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Signalement Routier</string>
+    <string name="title_activity_main">Signalement Routier</string>
+    <string name="package_name">com.antananarivo.signalement</string>
+    <string name="custom_url_scheme">com.antananarivo.signalement</string>
+</resources>

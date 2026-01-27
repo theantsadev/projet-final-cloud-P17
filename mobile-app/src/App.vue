@@ -1,67 +1,65 @@
 <template>
   <ion-app>
-    <ion-split-pane content-id="main-content" when="lg">
-      <!-- Menu latéral -->
-      <ion-menu content-id="main-content" type="overlay" v-if="isAuthenticated">
-        <ion-header>
-          <ion-toolbar color="primary">
-            <ion-title>Menu</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <!-- Profil utilisateur -->
-          <ion-list-header v-if="authStore.user">
-            <ion-label>
-              <h2>{{ authStore.userFullName }}</h2>
-              <p>{{ authStore.user.email }}</p>
-            </ion-label>
-          </ion-list-header>
+    <!-- Menu latéral -->
+    <ion-menu content-id="main-content" type="overlay" v-if="isAuthenticated">
+      <ion-header>
+        <ion-toolbar color="primary">
+          <ion-title>Menu</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content>
+        <!-- Profil utilisateur -->
+        <ion-list-header v-if="authStore.user">
+          <ion-label>
+            <h2>{{ authStore.userFullName }}</h2>
+            <p>{{ authStore.user.email }}</p>
+          </ion-label>
+        </ion-list-header>
 
-          <ion-list lines="none">
-            <ion-menu-toggle auto-hide="false">
-              <ion-item 
-                button 
-                router-link="/map" 
-                :class="{ 'selected': currentRoute === '/map' }"
-              >
-                <ion-icon :icon="mapOutline" slot="start"></ion-icon>
-                <ion-label>Carte</ion-label>
-              </ion-item>
+        <ion-list lines="none">
+          <ion-menu-toggle :auto-hide="false">
+            <ion-item 
+              button 
+              router-link="/map" 
+              :class="{ 'selected': currentRoute === '/map' }"
+            >
+              <ion-icon :icon="mapOutline" slot="start"></ion-icon>
+              <ion-label>Carte</ion-label>
+            </ion-item>
 
-              <ion-item 
-                button 
-                router-link="/signalements"
-                :class="{ 'selected': currentRoute === '/signalements' }"
-              >
-                <ion-icon :icon="listOutline" slot="start"></ion-icon>
-                <ion-label>Signalements</ion-label>
-              </ion-item>
+            <ion-item 
+              button 
+              router-link="/signalements"
+              :class="{ 'selected': currentRoute === '/signalements' }"
+            >
+              <ion-icon :icon="listOutline" slot="start"></ion-icon>
+              <ion-label>Signalements</ion-label>
+            </ion-item>
 
-              <ion-item 
-                button 
-                router-link="/home"
-                :class="{ 'selected': currentRoute === '/home' }"
-              >
-                <ion-icon :icon="personOutline" slot="start"></ion-icon>
-                <ion-label>Mon Profil</ion-label>
-              </ion-item>
-            </ion-menu-toggle>
-          </ion-list>
+            <ion-item 
+              button 
+              router-link="/home"
+              :class="{ 'selected': currentRoute === '/home' }"
+            >
+              <ion-icon :icon="personOutline" slot="start"></ion-icon>
+              <ion-label>Mon Profil</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+        </ion-list>
 
-          <ion-list lines="none" class="bottom-menu">
-            <ion-menu-toggle auto-hide="false">
-              <ion-item button @click="handleLogout" color="danger">
-                <ion-icon :icon="logOutOutline" slot="start"></ion-icon>
-                <ion-label>Déconnexion</ion-label>
-              </ion-item>
-            </ion-menu-toggle>
-          </ion-list>
-        </ion-content>
-      </ion-menu>
+        <ion-list lines="none" class="bottom-menu">
+          <ion-menu-toggle :auto-hide="false">
+            <ion-item button @click="handleLogout" color="danger">
+              <ion-icon :icon="logOutOutline" slot="start"></ion-icon>
+              <ion-label>Déconnexion</ion-label>
+            </ion-item>
+          </ion-menu-toggle>
+        </ion-list>
+      </ion-content>
+    </ion-menu>
 
-      <!-- Contenu principal -->
-      <ion-router-outlet id="main-content"></ion-router-outlet>
-    </ion-split-pane>
+    <!-- Contenu principal -->
+    <ion-router-outlet id="main-content"></ion-router-outlet>
   </ion-app>
 </template>
 

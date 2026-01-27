@@ -141,10 +141,10 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const toastColor = ref('success')
 
-// Token preview (first 20 chars)
+// User ID preview
 const tokenPreview = computed(() => {
-  if (authStore.token) {
-    return authStore.token.substring(0, 30) + '...'
+  if (authStore.userId) {
+    return authStore.userId.substring(0, 20) + '...'
   }
   return 'N/A'
 })
