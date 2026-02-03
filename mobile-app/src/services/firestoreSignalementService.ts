@@ -17,27 +17,23 @@ import {
 import { db } from '@/firebase/config'
 import firebaseAuthService from './firebaseAuthService'
 
-export type TypeProbleme = 'NID_DE_POULE' | 'FISSURE' | 'INONDATION' | 'OBSTACLE' | 'ECLAIRAGE' | 'SIGNALISATION' | 'AUTRE'
-export type SignalementStatus = 'NOUVEAU' | 'EN_COURS' | 'RESOLU' | 'REJETE'
-export type Priorite = 'BASSE' | 'NORMALE' | 'HAUTE' | 'URGENTE'
+// Types correspondant au backend identity-provider
+export type StatutSignalement = 'NOUVEAU' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
 
 export interface Signalement {
   id: string
   titre: string
   description: string
-  typeProbleme: TypeProbleme
+  statut: StatutSignalement
   latitude: number
   longitude: number
-  adresse: string
-  photoUrl?: string
-  statut: SignalementStatus
-  priorite: Priorite
-  dateSignalement: Date
-  dateResolution?: Date
-  commentaireResolution?: string
-  createdById: string
-  createdByName: string
-  createdByEmail: string
+  surfaceM2?: number
+  budget?: number
+  entrepriseConcernee?: string
+  pourcentageAvancement: number
+  user_id: string
+  firebaseId?: string
+  isSynchronized?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -45,99 +41,72 @@ export interface Signalement {
 export interface SignalementCreateRequest {
   titre: string
   description?: string
-  typeProbleme: TypeProbleme
   latitude: number
   longitude: number
-  adresse?: string
-  photoUrl?: string
-  priorite?: Priorite
+  surfaceM2?: number
+  budget?: number
+  entrepriseConcernee?: string
+  pourcentageAvancement?: number
 }
 
 export interface SignalementRecap {
   total: number
   nouveaux: number
   enCours: number
-  resolus: number
-  pourcentageResolus: number
+  termines: number
+  annules: number
+  pourcentageTermines: number
 }
 
-// Labels pour les types de problèmes
-export const typeProblemeLabels: Record<TypeProbleme, string> = {
-  NID_DE_POULE: 'Nid de poule',
-  FISSURE: 'Fissure',
-  INONDATION: 'Inondation',
-  OBSTACLE: 'Obstacle',
-  ECLAIRAGE: 'Éclairage',
-  SIGNALISATION: 'Signalisation',
-  AUTRE: 'Autre'
-}
-
-// Labels pour les statuts
-export const statutLabels: Record<SignalementStatus, string> = {
+// Labels pour les statuts (correspondant au backend)
+export const statutLabels: Record<StatutSignalement, string> = {
   NOUVEAU: 'Nouveau',
   EN_COURS: 'En cours',
-  RESOLU: 'Résolu',
-  REJETE: 'Rejeté'
-}
-
-// Labels pour les priorités
-export const prioriteLabels: Record<Priorite, string> = {
-  BASSE: 'Basse',
-  NORMALE: 'Normale',
-  HAUTE: 'Haute',
-  URGENTE: 'Urgente'
+  TERMINE: 'Terminé',
+  ANNULE: 'Annulé'
 }
 
 // Couleurs pour les statuts
-export const statutColors: Record<SignalementStatus, string> = {
+export const statutColors: Record<StatutSignalement, string> = {
   NOUVEAU: 'primary',
   EN_COURS: 'warning',
-  RESOLU: 'success',
-  REJETE: 'danger'
+  TERMINE: 'success',
+  ANNULE: 'danger'
 }
 
-// Couleurs pour les priorités
-export const prioriteColors: Record<Priorite, string> = {
-  BASSE: 'medium',
-  NORMALE: 'primary',
-  HAUTE: 'warning',
-  URGENTE: 'danger'
+// Labels pour types de problème (pour compatibilité avec les vues existantes)
+export const typeProblemeLabels: Record<string, string> = {
+  'nid-de-poule': 'Nid de poule',
+  'fissure': 'Fissure',
+  'inondation': 'Inondation',
+  'eclairage': 'Éclairage défaillant',
+  'autre': 'Autre'
 }
 
-// Icônes pour les types de problèmes
-export const typeProblemeIcons: Record<TypeProbleme, string> = {
-  NID_DE_POULE: 'alert-circle',
-  FISSURE: 'warning',
-  INONDATION: 'water',
-  OBSTACLE: 'construct',
-  ECLAIRAGE: 'bulb',
-  SIGNALISATION: 'sign-post',
-  AUTRE: 'help-circle'
+// Labels pour priorités (pour compatibilité avec les vues existantes)
+export const prioriteLabels: Record<string, string> = {
+  'basse': 'Basse',
+  'moyenne': 'Moyenne',
+  'haute': 'Haute',
+  'critique': 'Critique'
 }
 
-// Convertir un document Firestore en objet Signalement
+// Convertir un document Firestore en objet Signalement (structure backend)
 function docToSignalement(docId: string, data: DocumentData): Signalement {
   return {
     id: docId,
     titre: data.titre || '',
     description: data.description || '',
-    typeProbleme: data.typeProbleme || 'AUTRE',
+    statut: data.statut || 'NOUVEAU',
     latitude: data.latitude || 0,
     longitude: data.longitude || 0,
-    adresse: data.adresse || '',
-    photoUrl: data.photoUrl,
-    statut: data.statut || 'NOUVEAU',
-    priorite: data.priorite || 'NORMALE',
-    dateSignalement: data.dateSignalement instanceof Timestamp 
-      ? data.dateSignalement.toDate() 
-      : new Date(data.dateSignalement || Date.now()),
-    dateResolution: data.dateResolution instanceof Timestamp 
-      ? data.dateResolution.toDate() 
-      : data.dateResolution ? new Date(data.dateResolution) : undefined,
-    commentaireResolution: data.commentaireResolution,
-    createdById: data.createdById || '',
-    createdByName: data.createdByName || '',
-    createdByEmail: data.createdByEmail || '',
+    surfaceM2: data.surfaceM2,
+    budget: data.budget,
+    entrepriseConcernee: data.entrepriseConcernee,
+    pourcentageAvancement: data.pourcentageAvancement || 0,
+    user_id: data.user_id || '',
+    firebaseId: data.firebaseId || docId,
+    isSynchronized: data.isSynchronized || false,
     createdAt: data.createdAt instanceof Timestamp 
       ? data.createdAt.toDate() 
       : new Date(data.createdAt || Date.now()),
@@ -155,7 +124,7 @@ class FirestoreSignalementService {
     try {
       const q = query(
         collection(db, this.collectionName),
-        orderBy('dateSignalement', 'desc')
+        orderBy('createdAt', 'desc')
       )
       const querySnapshot = await getDocs(q)
       
@@ -176,8 +145,8 @@ class FirestoreSignalementService {
     try {
       const q = query(
         collection(db, this.collectionName),
-        where('createdById', '==', userId),
-        orderBy('dateSignalement', 'desc')
+        where('user_id', '==', userId),
+        orderBy('createdAt', 'desc')
       )
       const querySnapshot = await getDocs(q)
       
@@ -204,7 +173,7 @@ class FirestoreSignalementService {
     }
   }
 
-  // Créer un signalement
+  // Créer un signalement (structure backend identity-provider)
   async create(data: SignalementCreateRequest): Promise<Signalement> {
     const user = firebaseAuthService.getCurrentUser()
     if (!user) {
@@ -215,17 +184,15 @@ class FirestoreSignalementService {
       const signalementData = {
         titre: data.titre,
         description: data.description || '',
-        typeProbleme: data.typeProbleme,
+        statut: 'NOUVEAU' as StatutSignalement,
         latitude: data.latitude,
         longitude: data.longitude,
-        adresse: data.adresse || '',
-        photoUrl: data.photoUrl || null,
-        statut: 'NOUVEAU' as SignalementStatus,
-        priorite: data.priorite || 'NORMALE',
-        dateSignalement: serverTimestamp(),
-        createdById: user.id,
-        createdByName: user.fullName,
-        createdByEmail: user.email,
+        surfaceM2: data.surfaceM2 || null,
+        budget: data.budget || null,
+        entrepriseConcernee: data.entrepriseConcernee || '',
+        pourcentageAvancement: data.pourcentageAvancement || 0,
+        user_id: user.id,
+        isSynchronized: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }
@@ -237,17 +204,16 @@ class FirestoreSignalementService {
         id: docRef.id,
         titre: data.titre,
         description: data.description || '',
-        typeProbleme: data.typeProbleme,
+        statut: 'NOUVEAU',
         latitude: data.latitude,
         longitude: data.longitude,
-        adresse: data.adresse || '',
-        photoUrl: data.photoUrl,
-        statut: 'NOUVEAU',
-        priorite: data.priorite || 'NORMALE',
-        dateSignalement: new Date(),
-        createdById: user.id,
-        createdByName: user.fullName,
-        createdByEmail: user.email,
+        surfaceM2: data.surfaceM2,
+        budget: data.budget,
+        entrepriseConcernee: data.entrepriseConcernee,
+        pourcentageAvancement: data.pourcentageAvancement || 0,
+        user_id: user.id,
+        firebaseId: docRef.id,
+        isSynchronized: false,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -270,7 +236,7 @@ class FirestoreSignalementService {
       if (!signalement) {
         throw new Error('Signalement non trouvé')
       }
-      if (signalement.createdById !== userId) {
+      if (signalement.user_id !== userId) {
         throw new Error('Vous ne pouvez supprimer que vos propres signalements')
       }
 

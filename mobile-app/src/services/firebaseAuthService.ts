@@ -1,4 +1,5 @@
 // Service d'authentification Firebase
+// Compatible avec la structure identity-provider
 import { 
   signInWithEmailAndPassword, 
   signOut, 
@@ -7,30 +8,9 @@ import {
   updateProfile,
   type User as FirebaseUser
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { auth, db } from '@/firebase/config'
-
-export interface User {
-  id: string
-  email: string
-  fullName: string
-  phone?: string
-  role: string
-  isActive: boolean
-  createdAt?: Date
-}
-
-export interface LoginRequest {
-  email: string
-  password: string
-}
-
-export interface RegisterRequest {
-  email: string
-  password: string
-  fullName: string
-  phone?: string
-}
+import type { User, LoginRequest, RegisterRequest } from '@/types/firestore.types'
 
 class FirebaseAuthService {
   private currentUser: User | null = null
