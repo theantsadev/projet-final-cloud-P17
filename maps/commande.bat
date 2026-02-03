@@ -1,5 +1,5 @@
 docker run -d `
   --name antananarivo-map `
-  -p 8080:8080 `
-  -v ${PWD}/maps/output:/data `
+  -p 8081:8080 `
+  -v ${PWD}/maps/data:/data `
   maptiler/tileserver-gl
