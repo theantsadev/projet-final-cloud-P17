@@ -1,0 +1,28 @@
+j# 1. Récupérer toute une collection
+curl -X GET \
+  'https://{votre-projet}.firebaseio.com/{collection}.json?auth={votre-token}'
+
+# 2. Récupérer un document spécifique
+curl -X GET \
+  'https://{votre-projet}.firebaseio.com/{collection}/{documentId}.json?auth={votre-token}'
+
+# 3. Avec filtres simples
+curl -X GET \
+  'https://{votre-projet}.firebaseio.com/{collection}.json?orderBy="createdAt"&limitToLast=10&auth={votre-token}'
+
+# 4. Avec query (Firestore REST API - plus récent)
+curl -X POST \
+  'https://firestore.googleapis.com/v1/projects/{votre-projet}/databases/(default)/documents:runQuery' \
+  -H 'Authorization: Bearer {votre-token}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "structuredQuery": {
+      "from": [{"collectionId": "users"}],
+      "limit": 10
+    }
+  }'
+
+
+  # 1. Récupérer toute une collection
+curl -X GET \
+  'https://projets4-a0404.firebaseio.com/users.json?auth={votre-token}'
