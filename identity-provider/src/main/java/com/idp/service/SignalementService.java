@@ -1,0 +1,473 @@
+package com.idp.service;
+
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteResult;
+import com.idp.dto.SignalementRequest;
+import com.idp.dto.SignalementResponse;
+import com.idp.entity.Signalement;
+import com.idp.entity.StatutSignalement;
+import com.idp.entity.User;
+import com.idp.exception.BusinessException;
+import com.idp.repository.SignalementRepository;
+import com.idp.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SignalementService {
+    
+    private final SignalementRepository signalementRepository;
+    private final UserRepository userRepository;
+    private final Firestore firestore;
+    private static final String COLLECTION_NAME = "signalements";
+    
+    /**
+     * Créer un nouveau signalement
+     */
+    @Transactional
+    public SignalementResponse createSignalement(SignalementRequest request, String userId) {
+        try {
+            // Récupérer l'utilisateur
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Utilisateur non trouvé avec l'ID: " + userId));
+            
+            Signalement signalement = Signalement.builder()
+                    .titre(request.getTitre())
+                    .description(request.getDescription())
+                    .latitude(request.getLatitude())
+                    .longitude(request.getLongitude())
+                    .surfaceM2(request.getSurfaceM2())
+                    .budget(request.getBudget())
+                    .entrepriseConcernee(request.getEntrepriseConcernee())
+                    .pourcentageAvancement(request.getPourcentageAvancement() != null ? request.getPourcentageAvancement() : 0)
+                    .statut(StatutSignalement.NOUVEAU)
+                    .isSynchronized(false)
+                    .signaleur(user)
+                    .build();
+            
+            signalement = signalementRepository.save(signalement);
+            
+            // Synchroniser vers Firebase
+            synchronizeToFirebase(signalement);
+            
+            return mapToResponse(signalement);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Erreur lors de la création du signalement", e);
+            throw new BusinessException("SIGNALEMENT_CREATE_ERROR", "Erreur lors de la création du signalement");
+        }
+    }
+    
+    /**
+     * Récupérer tous les signalements
+     */
+    public List<SignalementResponse> getAllSignalements() {
+        return signalementRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Récupérer un signalement par ID
+     */
+    public SignalementResponse getSignalementById(String id) {
+        Signalement signalement = signalementRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+        return mapToResponse(signalement);
+    }
+    
+    /**
+     * Récupérer tous les signalements d'un utilisateur
+     */
+    public List<SignalementResponse> getSignalementsByUser(String userId) {
+        return signalementRepository.findBySignaleurId(userId)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Récupérer les signalements par statut
+     */
+    public List<SignalementResponse> getSignalementsByStatut(String statut) {
+        StatutSignalement statutEnum = StatutSignalement.valueOf(statut.toUpperCase());
+        return signalementRepository.findByStatut(statutEnum)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Mettre à jour un signalement
+     */
+    @Transactional
+    public SignalementResponse updateSignalement(String id, SignalementRequest request) {
+        Signalement signalement = signalementRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+        
+        signalement.setTitre(request.getTitre());
+        signalement.setDescription(request.getDescription());
+        signalement.setLatitude(request.getLatitude());
+        signalement.setLongitude(request.getLongitude());
+        signalement.setSurfaceM2(request.getSurfaceM2());
+        signalement.setBudget(request.getBudget());
+        signalement.setEntrepriseConcernee(request.getEntrepriseConcernee());
+        
+        if (request.getPourcentageAvancement() != null) {
+            signalement.setPourcentageAvancement(request.getPourcentageAvancement());
+        }
+        
+        signalement.setIsSynchronized(false);
+        signalement = signalementRepository.save(signalement);
+        
+        // Synchroniser vers Firebase
+        synchronizeToFirebase(signalement);
+        
+        return mapToResponse(signalement);
+    }
+    
+    /**
+     * Mettre à jour le statut d'un signalement
+     */
+    @Transactional
+    public SignalementResponse updateStatut(String id, String newStatut) {
+        Signalement signalement = signalementRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+        
+        StatutSignalement statutEnum = StatutSignalement.valueOf(newStatut.toUpperCase());
+        signalement.setStatut(statutEnum);
+        signalement.setIsSynchronized(false);
+        signalement = signalementRepository.save(signalement);
+        
+        // Synchroniser vers Firebase
+        synchronizeToFirebase(signalement);
+        
+        return mapToResponse(signalement);
+    }
+    
+    /**
+     * Mettre à jour le pourcentage d'avancement
+     */
+    @Transactional
+    public SignalementResponse updateAvancement(String id, Integer pourcentage) {
+        if (pourcentage < 0 || pourcentage > 100) {
+            throw new BusinessException("INVALID_PERCENTAGE", "Le pourcentage doit être entre 0 et 100");
+        }
+        
+        Signalement signalement = signalementRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+        
+        signalement.setPourcentageAvancement(pourcentage);
+        signalement.setIsSynchronized(false);
+        signalement = signalementRepository.save(signalement);
+        
+        // Synchroniser vers Firebase
+        synchronizeToFirebase(signalement);
+        
+        return mapToResponse(signalement);
+    }
+    
+    /**
+     * Supprimer un signalement
+     */
+    @Transactional
+    public void deleteSignalement(String id) {
+        Signalement signalement = signalementRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+        
+        // Supprimer de Firebase
+        if (signalement.getFirebaseId() != null && !signalement.getFirebaseId().isEmpty()) {
+            try {
+                firestore.collection(COLLECTION_NAME).document(signalement.getFirebaseId()).delete().get();
+            } catch (ExecutionException | InterruptedException e) {
+                log.warn("Erreur lors de la suppression du signalement dans Firebase", e);
+            }
+        }
+        
+        signalementRepository.delete(signalement);
+    }
+    
+    /**
+     * Récupérer les signalements dans une zone géographique
+     */
+    public List<SignalementResponse> getSignalementsByGeographicBounds(Double minLat, Double maxLat, Double minLon, Double maxLon) {
+        return signalementRepository.findByGeographicBounds(minLat, maxLat, minLon, maxLon)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Synchroniser un signalement vers Firebase
+     */
+    @Transactional
+    public void synchronizeToFirebase(Signalement signalement) {
+        try {
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", signalement.getId());
+            data.put("titre", signalement.getTitre());
+            data.put("description", signalement.getDescription());
+            data.put("statut", signalement.getStatut().getValeur());
+            data.put("latitude", signalement.getLatitude());
+            data.put("longitude", signalement.getLongitude());
+            data.put("surfaceM2", signalement.getSurfaceM2());
+            data.put("budget", signalement.getBudget());
+            data.put("entrepriseConcernee", signalement.getEntrepriseConcernee());
+            data.put("pourcentageAvancement", signalement.getPourcentageAvancement());
+            data.put("createdAt", signalement.getCreatedAt());
+            data.put("updatedAt", signalement.getUpdatedAt());
+            // ⭐ IMPORTANT: Ajouter le user_id pour la synchronisation inverse
+            if (signalement.getSignaleur() != null) {
+                data.put("user_id", signalement.getSignaleur().getId());
+            }
+            data.put("synchronized", true);
+            
+            @SuppressWarnings("all")
+            WriteResult result = null;
+            if (signalement.getFirebaseId() != null && !signalement.getFirebaseId().isEmpty()) {
+                // Mise à jour
+                log.info("📝 Mise à jour du signalement {} dans Firebase", signalement.getFirebaseId());
+                result = firestore.collection(COLLECTION_NAME)
+                        .document(signalement.getFirebaseId())
+                        .set(data)
+                        .get();
+                log.info("✅ Signalement {} mis à jour dans Firebase", signalement.getFirebaseId());
+            } else {
+                // Création - Firestore crée automatiquement la collection au premier write
+                log.info("🆕 Création du signalement {} dans Firebase (collection: {})", signalement.getId(), COLLECTION_NAME);
+                result = firestore.collection(COLLECTION_NAME)
+                        .document(signalement.getId())
+                        .set(data)
+                        .get();
+                
+                signalement.setFirebaseId(signalement.getId());
+                log.info("✅ Signalement {} créé dans Firebase avec succès", signalement.getId());
+            }
+            
+            signalement.setIsSynchronized(true);
+            signalement.setLastSyncedAt(LocalDateTime.now());
+            signalementRepository.save(signalement);
+            
+            log.info("✅ Signalement {} synchronisé vers Firebase", signalement.getId());
+        } catch (ExecutionException e) {
+            log.error("❌ Erreur ExecutionException lors de la synchronisation vers Firebase: {}", e.getMessage(), e);
+            throw new BusinessException("FIREBASE_SYNC_ERROR", "Erreur lors de la synchronisation: " + e.getMessage());
+        } catch (InterruptedException e) {
+            log.error("❌ Erreur InterruptedException lors de la synchronisation vers Firebase: {}", e.getMessage(), e);
+            Thread.currentThread().interrupt();
+            throw new BusinessException("FIREBASE_SYNC_ERROR", "Synchronisation interrompue");
+        }
+    }
+    
+    /**
+     * Synchroniser tous les signalements non synchronisés
+     */
+    @Transactional
+    public void synchronizeAllPending() {
+        List<Signalement> pendingSignalements = signalementRepository.findByIsSynchronizedFalse();
+        
+        for (Signalement signalement : pendingSignalements) {
+            try {
+                synchronizeToFirebase(signalement);
+            } catch (Exception e) {
+                log.error("Erreur lors de la synchronisation du signalement {}", signalement.getId(), e);
+            }
+        }
+    }
+    
+    /**
+     * Récupérer les signalements depuis Firebase
+     */
+    public List<SignalementResponse> syncFromFirebase() {
+        try {
+            var documents = firestore.collection(COLLECTION_NAME).get().get();
+            
+            return documents.getDocuments().stream()
+                    .map(doc -> {
+                        Optional<Signalement> existing = signalementRepository.findByFirebaseId(doc.getId());
+                        
+                        Signalement signalement = existing.orElse(Signalement.builder().build());
+                        signalement.setFirebaseId(doc.getId());
+                        signalement.setTitre(doc.getString("titre"));
+                        signalement.setDescription(doc.getString("description"));
+                        signalement.setLatitude(convertToDouble(doc.get("latitude")));
+                        signalement.setLongitude(convertToDouble(doc.get("longitude")));
+                        
+                        Object surfaceObj = doc.get("surfaceM2");
+                        Double surfaceM2 = convertToDouble(surfaceObj);
+                        signalement.setSurfaceM2(surfaceM2 != null ? new java.math.BigDecimal(surfaceM2) : null);
+                        
+                        Object budgetObj = doc.get("budget");
+                        Double budget = convertToDouble(budgetObj);
+                        signalement.setBudget(budget != null ? new java.math.BigDecimal(budget) : null);
+                        
+                        signalement.setEntrepriseConcernee(doc.getString("entrepriseConcernee"));
+                        
+                        Long percentage = convertToLong(doc.get("pourcentageAvancement"));
+                        signalement.setPourcentageAvancement(percentage != null ? Math.toIntExact(percentage) : 0);
+                        
+                        // Récupérer et convertir le statut
+                        String statutStr = doc.getString("statut");
+                        try {
+                            signalement.setStatut(statutStr != null ? 
+                                StatutSignalement.valueOf(statutStr) : 
+                                StatutSignalement.NOUVEAU);
+                        } catch (IllegalArgumentException e) {
+                            log.warn("Statut invalide '{}', utilisation de NOUVEAU par défaut", statutStr);
+                            signalement.setStatut(StatutSignalement.NOUVEAU);
+                        }
+                        
+                        // ⭐ IMPORTANT: Récupérer le user_id depuis Firebase et charger l'utilisateur
+                        String userId = doc.getString("user_id");
+                        if (userId != null && !userId.isEmpty()) {
+                            Optional<User> user = userRepository.findById(userId);
+                            if (user.isPresent()) {
+                                signalement.setSignaleur(user.get());
+                            } else {
+                                log.warn("⚠️ Utilisateur {} introuvable pour le signalement {}", userId, doc.getId());
+                                // Skip ce signalement si l'utilisateur n'existe pas
+                                return null;
+                            }
+                        } else {
+                            log.warn("⚠️ Pas de user_id dans le signalement Firebase {}, sync impossible", doc.getId());
+                            // Skip ce signalement s'il n'a pas de user_id
+                            return null;
+                        }
+                        
+                        signalement.setIsSynchronized(true);
+                        
+                        signalementRepository.save(signalement);
+                        return mapToResponse(signalement);
+                    })
+                    .filter(response -> response != null)  // Filtrer les signalements non synchronisés
+                    .collect(Collectors.toList());
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Erreur lors de la récupération des données depuis Firebase", e);
+            throw new BusinessException("FIREBASE_SYNC_ERROR", "Erreur lors de la synchronisation");
+        }
+    }
+    
+    /**
+     * Convertir un objet Firebase en Double de manière sûre
+     */
+    private Double convertToDouble(Object value) {
+        if (value == null) {
+            return null;
+        }
+        
+        if (value instanceof Double) {
+            return (Double) value;
+        } else if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        } else if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (NumberFormatException e) {
+                log.warn("Impossible de convertir {} en Double", value);
+                return null;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Convertir un objet Firebase en Long de manière sûre
+     */
+    private Long convertToLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        
+        if (value instanceof Long) {
+            return (Long) value;
+        } else if (value instanceof Number) {
+            return ((Number) value).longValue();
+        } else if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                log.warn("Impossible de convertir {} en Long", value);
+                return null;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Obtenir les statistiques des signalements
+     */
+    public com.idp.dto.SignalementStatisticsResponse getStatistics() {
+        List<Signalement> allSignalements = signalementRepository.findAll();
+        
+        long total = allSignalements.size();
+        long nouveaux = allSignalements.stream().filter(s -> s.getStatut() == StatutSignalement.NOUVEAU).count();
+        long enCours = allSignalements.stream().filter(s -> s.getStatut() == StatutSignalement.EN_COURS).count();
+        long termines = allSignalements.stream().filter(s -> s.getStatut() == StatutSignalement.TERMINE).count();
+        long annules = allSignalements.stream().filter(s -> s.getStatut() == StatutSignalement.ANNULE).count();
+        
+        java.math.BigDecimal totalSurfaceM2 = allSignalements.stream()
+                .map(Signalement::getSurfaceM2)
+                .filter(java.util.Objects::nonNull)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        
+        java.math.BigDecimal totalBudget = allSignalements.stream()
+                .map(Signalement::getBudget)
+                .filter(java.util.Objects::nonNull)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        
+        Double averageAvancement = allSignalements.stream()
+                .mapToInt(Signalement::getPourcentageAvancement)
+                .average()
+                .orElse(0.0);
+        
+        return com.idp.dto.SignalementStatisticsResponse.builder()
+                .totalSignalements(total)
+                .signalementNouveaux(nouveaux)
+                .signalementEnCours(enCours)
+                .signalementTermines(termines)
+                .signalementAnnules(annules)
+                .totalSurfaceM2(totalSurfaceM2)
+                .totalBudget(totalBudget)
+                .averageAvancement(averageAvancement)
+                .build();
+    }
+    
+    /**
+     * Mapper une entité Signalement vers SignalementResponse
+     */
+    private SignalementResponse mapToResponse(Signalement signalement) {
+        return SignalementResponse.builder()
+                .id(signalement.getId())
+                .titre(signalement.getTitre())
+                .description(signalement.getDescription())
+                .statut(signalement.getStatut().getValeur())
+                .latitude(signalement.getLatitude())
+                .longitude(signalement.getLongitude())
+                .surfaceM2(signalement.getSurfaceM2())
+                .budget(signalement.getBudget())
+                .entrepriseConcernee(signalement.getEntrepriseConcernee())
+                .pourcentageAvancement(signalement.getPourcentageAvancement())
+                .signaleurId(signalement.getSignaleur() != null ? signalement.getSignaleur().getId() : null)
+                .signaleurNom(signalement.getSignaleur() != null ? signalement.getSignaleur().getFullName() : null)
+                .firebaseId(signalement.getFirebaseId())
+                .isSynchronized(signalement.getIsSynchronized())
+                .lastSyncedAt(signalement.getLastSyncedAt())
+                .createdAt(signalement.getCreatedAt())
+                .updatedAt(signalement.getUpdatedAt())
+                .build();
+    }
+}

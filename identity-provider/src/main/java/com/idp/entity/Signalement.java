@@ -1,0 +1,75 @@
+package com.idp.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "signalements")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Signalement {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(length = 36)
+    private String id;
+    
+    @Column(nullable = false, length = 500)
+    private String titre;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatutSignalement statut;
+    
+    @Column(name = "latitude", nullable = false)
+    private Double latitude;
+    
+    @Column(name = "longitude", nullable = false)
+    private Double longitude;
+    
+    @Column(name = "surface_m2")
+    private BigDecimal surfaceM2;
+    
+    @Column(name = "budget")
+    private BigDecimal budget;
+    
+    @Column(name = "entreprise_concernee", length = 255)
+    private String entrepriseConcernee;
+    
+    @Column(name = "pourcentage_avancement")
+    private Integer pourcentageAvancement = 0;
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User signaleur;
+    
+    @Column(name = "firebase_id", length = 255)
+    private String firebaseId;
+    
+    @Column(name = "is_synchronized")
+    private Boolean isSynchronized = false;
+    
+    @Column(name = "last_synced_at")
+    private LocalDateTime lastSyncedAt;
+    
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
