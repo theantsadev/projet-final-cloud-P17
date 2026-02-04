@@ -10,9 +10,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Configuration
@@ -47,19 +51,53 @@ public class FirebaseConfig {
         log.info("📁 Cherche fichier: {}", credentialsPath);
 
         try {
-            String path = credentialsPath.replace("classpath:", "");
-            log.info("🔍 Recherche: {}", path);
-
-            ClassPathResource resource = new ClassPathResource(path);
-            log.info("📄 Fichier existe: {}", resource.exists());
-
-            if (!resource.exists()) {
-                log.error("❌ Fichier NON TROUVÉ: {}", path);
-                log.info("📂 Répertoire resources: {}", new ClassPathResource(".").getURL());
-                throw new RuntimeException("Fichier Firebase non trouvé: " + path);
+            InputStream serviceAccount = null;
+            Resource resource = null;
+            
+            // Déterminer le type de chemin et charger le fichier en conséquence
+            if (credentialsPath.startsWith("file:")) {
+                // Chemin absolu avec préfixe file:
+                String absolutePath = credentialsPath.replace("file:", "");
+                log.info("🔍 Chemin absolu détecté: {}", absolutePath);
+                
+                resource = new FileSystemResource(absolutePath);
+                log.info("📄 Fichier existe: {}", resource.exists());
+                
+                if (!resource.exists()) {
+                    log.error("❌ Fichier NON TROUVÉ: {}", absolutePath);
+                    throw new RuntimeException("Fichier Firebase non trouvé: " + absolutePath);
+                }
+                
+                serviceAccount = resource.getInputStream();
+            } else if (credentialsPath.startsWith("classpath:")) {
+                // Chemin classpath
+                String classPath = credentialsPath.replace("classpath:", "");
+                log.info("🔍 Chemin ClassPath détecté: {}", classPath);
+                
+                resource = new ClassPathResource(classPath);
+                log.info("📄 Fichier existe: {}", resource.exists());
+                
+                if (!resource.exists()) {
+                    log.error("❌ Fichier NON TROUVÉ: {}", classPath);
+                    throw new RuntimeException("Fichier Firebase non trouvé: " + classPath);
+                }
+                
+                serviceAccount = resource.getInputStream();
+            } else {
+                // Chemin relatif ou absolu sans préfixe
+                log.info("🔍 Chemin relatif détecté: {}", credentialsPath);
+                
+                resource = new FileSystemResource(credentialsPath);
+                log.info("📄 Fichier existe: {}", resource.exists());
+                
+                if (!resource.exists()) {
+                    log.error("❌ Fichier NON TROUVÉ: {}", credentialsPath);
+                    throw new RuntimeException("Fichier Firebase non trouvé: " + credentialsPath);
+                }
+                
+                serviceAccount = resource.getInputStream();
             }
 
-            InputStream serviceAccount = resource.getInputStream();
             log.info("✅ Fichier Firebase chargé");
 
             GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
