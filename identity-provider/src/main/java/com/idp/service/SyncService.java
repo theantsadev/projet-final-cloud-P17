@@ -505,7 +505,7 @@ public class SyncService {
      * DÉBLOQUER un utilisateur depuis le web (manager)
      */
     @Transactional
-    public void unlockUserFromWeb(String email) {
+    public User unlockUserFromWeb(String email) {
         try {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + email));
@@ -524,6 +524,7 @@ public class SyncService {
             syncUserToFirestore(user);
 
             log.info("✅ Utilisateur {} débloqué et sync vers Firestore", email);
+            return user;
 
         } catch (Exception e) {
             log.error("❌ Erreur déblocage utilisateur: {}", e.getMessage());

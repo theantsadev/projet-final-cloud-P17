@@ -2,10 +2,12 @@
 package com.idp.service;
 
 import com.idp.dto.*;
+import com.idp.entity.Role;
 import com.idp.entity.User;
 import com.idp.entity.UserSession;
 import com.idp.entity.LoginAttempt;
 import com.idp.exception.*;
+import com.idp.repository.RoleRepository;
 import com.idp.repository.UserRepository;
 import com.idp.repository.UserSessionRepository;
 import com.idp.repository.LoginAttemptRepository;
@@ -28,6 +30,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final UserSessionRepository sessionRepository;
     private final LoginAttemptRepository loginAttemptRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final SyncService syncService;
@@ -49,12 +52,17 @@ public class AuthService {
             throw new DuplicateEmailException(request.getEmail());
         }
 
+        // Récupérer le rôle USER
+        Role roleUser = roleRepository.findByNom("USER")
+                .orElseThrow(() -> new RuntimeException("Rôle USER non trouvé en base de données"));
+
         User user = new User();
         user.setId(UUID.randomUUID().toString());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
+        user.setRole(roleUser);  // ← Assigner le rôle USER
         user.setFirestoreId("user_" + UUID.randomUUID().toString());
         user.setSyncStatus("PENDING");
         user.setIsActive(true);
