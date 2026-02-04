@@ -500,7 +500,6 @@ function ManagerDashboard() {
                                 value={u.role}
                                 onChange={e => updateUserRole(u.id, e.target.value)}
                               >
-                                <option value="visitor">Visiteur</option>
                                 <option value="user">Utilisateur</option>
                                 <option value="manager">Manager</option>
                               </select>

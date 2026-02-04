@@ -4,8 +4,8 @@ import { useAuthStore } from '../../stores/authStore'
 import toast from 'react-hot-toast'
 
 function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('utilisateur@gmail.com')
+  const [password, setPassword] = useState('utilisateur')
   const [errors, setErrors] = useState({})
   
   const { login, quickLogin, isLoading, error, clearError } = useAuthStore()
@@ -47,6 +47,7 @@ function LoginPage() {
           visitor: '/visitor',
           manager: '/manager'
         }
+        console.log('User role:', result.user.role)
         
         // Use setTimeout to ensure state is updated before navigation
         setTimeout(() => {

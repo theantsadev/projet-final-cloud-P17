@@ -2,16 +2,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '../services/api'
 
-// Map backend roles array to a single frontend role string
-const mapBackendRolesToFrontend = (roles, emailFallback = '') => {
-  if (roles && roles.length > 0) {
-    const roleNames = roles.map(r => r.name || r)
-    if (roleNames.includes('MANAGER')) return 'manager'
-    if (roleNames.includes('USER')) return 'user'
-  }
-  // Heuristic fallback
-  if (emailFallback.includes('manager') || emailFallback.includes('admin')) return 'manager'
-  return 'visitor'
+// Map backend role to frontend role string
+const mapBackendRolesToFrontend = (roleNom) => {
+  return String(roleNom || '').toLowerCase()
 }
 
 export const useAuthStore = create(
@@ -47,7 +40,7 @@ export const useAuthStore = create(
           api.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`
 
           // Map backend roles to a single frontend role
-          const role = mapBackendRolesToFrontend(payload.user?.roles, email)
+          const role = String(payload.user?.role?.nom).toLowerCase()
 
           const user = {
             id: payload.user?.id || payload.userId,
@@ -90,7 +83,7 @@ export const useAuthStore = create(
 
           api.defaults.headers.common['Authorization'] = `Bearer ${payload.token}`
 
-          const userRole = mapBackendRolesToFrontend(payload.user?.roles, email) || role
+          const userRole = mapBackendRolesToFrontend(payload.user?.role?.nom)
 
           const user = {
             id: payload.user?.id || payload.userId,

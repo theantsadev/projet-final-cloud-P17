@@ -42,7 +42,7 @@ api.interceptors.response.use(
         localStorage.removeItem('auth-storage')
         window.location.href = '/auth/login'
       }
-      
+
       // Handle 423 Locked (account locked)
       if (error.response.status === 423) {
         console.error('Account is locked')
@@ -72,7 +72,6 @@ export const signalementAPI = {
   create: (data) => api.post('/signalements', data),
   update: (id, data) => api.put(`/signalements/${id}`, data),
   updateStatus: (id, statut) => api.patch(`/signalements/${id}/statut?statut=${statut}`),
-  updateAvancement: (id, pourcentage) => api.patch(`/signalements/${id}/avancement?pourcentage=${pourcentage}`),
   delete: (id) => api.delete(`/signalements/${id}`),
   getStatistics: () => api.get('/signalements/stats/dashboard')
 }
