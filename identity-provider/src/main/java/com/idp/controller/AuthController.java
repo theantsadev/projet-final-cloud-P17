@@ -73,11 +73,11 @@ public class AuthController {
         User updatedUser = authService.updateProfile(jwt, request);
 
         // Retour simplifié
-        Map<String, Object> response = Map.of(
-                "id", updatedUser.getId(),
-                "email", updatedUser.getEmail(),
-                "fullName", updatedUser.getFullName(),
-                "phone", updatedUser.getPhone());
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("id", updatedUser.getId());
+        response.put("email", updatedUser.getEmail());
+        response.put("fullName", updatedUser.getFullName());
+        response.put("phone", updatedUser.getPhone());
 
         return ResponseEntity.ok(ApiResponse.success(response, "Profil mis à jour"));
     }
@@ -114,16 +114,16 @@ public class AuthController {
         User user = authService.getProfile(jwt);
 
         // Retour simplifié
-        Map<String, Object> response = Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "fullName", user.getFullName(),
-                "phone", user.getPhone(),
-                "isActive", user.getIsActive(),
-                "isLocked", user.getIsLocked(),
-                "failedLoginAttempts", user.getFailedLoginAttempts(),
-                "lastLogin", user.getLastLogin(),
-                "lastFailedLogin", user.getLastFailedLogin());
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("id", user.getId());
+        response.put("email", user.getEmail());
+        response.put("fullName", user.getFullName());
+        response.put("phone", user.getPhone());
+        response.put("isActive", user.getIsActive());
+        response.put("isLocked", user.getIsLocked());
+        response.put("failedLoginAttempts", user.getFailedLoginAttempts());
+        response.put("lastLogin", user.getLastLogin());
+        response.put("lastFailedLogin", user.getLastFailedLogin());
 
         return ResponseEntity.ok(ApiResponse.success(response, "Profil récupéré"));
     }

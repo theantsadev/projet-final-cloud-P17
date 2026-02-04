@@ -45,7 +45,8 @@ public class SecurityConfig {
                                                                                              // signalement
                                                                 "/api/signalements/geo/**", // PostGIS endpoints
                                                                 "/api/signalements/statut/**", // Public statut endpoint
-                                                                "/api/signalements", // GET tous les signalements
+                                                                "/api/signalements",
+                                                                "/api/signalements/stats/dashboard", // GET tous les signalements
 
                                                                 // Swagger/OpenAPI
                                                                 "/api/swagger-ui/**",
