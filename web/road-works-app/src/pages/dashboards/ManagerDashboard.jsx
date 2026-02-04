@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { signalementAPI, usersAPI } from '../../services/api'
 import toast from 'react-hot-toast'
 
 function ManagerDashboard() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('reports')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -461,7 +463,13 @@ function ManagerDashboard() {
                             <td>{new Date(report.createdAt).toLocaleDateString('fr-FR')}</td>
                             <td>
                               <div className="flex gap-1">
-                                <button className="btn btn-secondary btn-sm" title="Voir">Voir</button>
+                                <button 
+                                  className="btn btn-secondary btn-sm" 
+                                  title="Voir"
+                                  onClick={() => navigate(`/manager/signalements/${report.id}`)}
+                                >
+                                  Voir
+                                </button>
                                 <button
                                   className="btn btn-danger btn-sm"
                                   title="Supprimer"

@@ -13,6 +13,9 @@ import RegisterPage from './pages/auth/RegisterPage'
 import VisitorDashboard from './pages/dashboards/VisitorDashboard'
 import ManagerDashboard from './pages/dashboards/ManagerDashboard'
 
+// Details Views
+import SignalementDetailsPage from './pages/SignalementDetailsPage'
+
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, token } = useAuthStore()
@@ -75,6 +78,7 @@ function App() {
         </ProtectedRoute>
       }>
         <Route index element={<ManagerDashboard />} />
+        <Route path="signalements/:id" element={<SignalementDetailsPage />} />
       </Route>
 
       {/* Default redirects */}
