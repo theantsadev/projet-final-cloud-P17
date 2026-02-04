@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class SignalementStatisticsResponse {
-    
+
     private Long totalSignalements;
     private Long signalementNouveaux;
     private Long signalementEnCours;
