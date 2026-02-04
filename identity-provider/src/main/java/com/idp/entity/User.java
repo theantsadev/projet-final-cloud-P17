@@ -26,6 +26,10 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    @ManyToOne
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 

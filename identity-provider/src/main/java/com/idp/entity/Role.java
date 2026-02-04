@@ -7,12 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "statut_avancement_signalement")
+@Table(name = "roles")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class StatutAvancementSignalement {
+public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,8 +20,5 @@ public class StatutAvancementSignalement {
     private String id;
 
     @Column(nullable = false, unique = true, length = 50)
-    private String statut;
-
-    @Column(nullable = false)
-    private Integer avancement;
+    private String nom;
 }
