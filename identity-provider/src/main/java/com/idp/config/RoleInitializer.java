@@ -18,11 +18,11 @@ public class RoleInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         log.info("Initialisation des rôles par défaut...");
-        
+
         // Vérifier et créer les rôles s'ils n'existent pas
         createRoleIfNotExists("USER", "Rôle utilisateur standard");
         createRoleIfNotExists("MANAGER", "Rôle gestionnaire");
-        
+
         log.info("✅ Initialisation des rôles complétée");
     }
 
