@@ -31,7 +31,8 @@ public class UserService {
     @Transactional
     public User unlockUser(String userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Utilisateur non trouvé avec l'ID: " + userId));
+                .orElseThrow(
+                        () -> new BusinessException("USER_NOT_FOUND", "Utilisateur non trouvé avec l'ID: " + userId));
 
         if (!user.getIsLocked()) {
             log.warn("L'utilisateur {} n'est pas bloqué", userId);
@@ -52,7 +53,8 @@ public class UserService {
      */
     public User getUserById(String userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "Utilisateur non trouvé avec l'ID: " + userId));
+                .orElseThrow(
+                        () -> new BusinessException("USER_NOT_FOUND", "Utilisateur non trouvé avec l'ID: " + userId));
     }
 
     /**

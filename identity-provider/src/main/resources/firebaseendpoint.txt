@@ -26,3 +26,5 @@ curl -X POST \
   # 1. Récupérer toute une collection
 curl -X GET \
   'https://projets4-a0404.firebaseio.com/users.json?auth={votre-token}'
+
+
