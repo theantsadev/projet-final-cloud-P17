@@ -4,10 +4,12 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
 import com.idp.dto.SignalementRequest;
 import com.idp.dto.SignalementResponse;
+import com.idp.entity.HistoriqueStatutSignalement;
 import com.idp.entity.Signalement;
 import com.idp.entity.StatutAvancementSignalement;
 import com.idp.entity.User;
 import com.idp.exception.BusinessException;
+import com.idp.repository.HistoriqueStatutSignalementRepository;
 import com.idp.repository.SignalementRepository;
 import com.idp.repository.StatutAvancementSignalementRepository;
 import com.idp.repository.UserRepository;
@@ -32,6 +34,7 @@ public class SignalementService {
     private final SignalementRepository signalementRepository;
     private final UserRepository userRepository;
     private final StatutAvancementSignalementRepository statutRepository;
+    private final HistoriqueStatutSignalementRepository historiqueRepository;
     private final Firestore firestore;
     private static final String COLLECTION_NAME = "signalements";
 
@@ -64,6 +67,7 @@ public class SignalementService {
                     .build();
 
             signalement = signalementRepository.save(signalement);
+            enregistrerHistoriqueStatut(signalement, statutNouveauOpt, LocalDateTime.now());
 
             // Synchroniser vers Firebase
             synchronizeToFirebase(signalement);
@@ -159,26 +163,8 @@ public class SignalementService {
         signalement.setIsSynchronized(false);
         signalement = signalementRepository.save(signalement);
 
-        // Synchroniser vers Firebase
-        synchronizeToFirebase(signalement);
-
-        return mapToResponse(signalement);
-    }
-
-    /**
-     * Mettre à jour le statut et l'avancement d'un signalement
-     */
-    @Transactional
-    public SignalementResponse updateAvancement(String id, String newStatut) {
-        Signalement signalement = signalementRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
-
-        StatutAvancementSignalement statut = statutRepository.findByStatut(newStatut.toUpperCase())
-                .orElseThrow(() -> new BusinessException("STATUT_NOT_FOUND", "Statut introuvable: " + newStatut));
-
-        signalement.setStatut(statut);
-        signalement.setIsSynchronized(false);
-        signalement = signalementRepository.save(signalement);
+        // Enregistrer l'historique du changement de statut
+        enregistrerHistoriqueStatut(signalement, statut, LocalDateTime.now());
 
         // Synchroniser vers Firebase
         synchronizeToFirebase(signalement);
@@ -452,6 +438,49 @@ public class SignalementService {
                 .totalBudget(totalBudget)
                 .averageAvancement(averageAvancement)
                 .build();
+    }
+
+    /**
+     * Enregistrer un changement de statut dans l'historique
+     */
+    private void enregistrerHistoriqueStatut(Signalement signalement, StatutAvancementSignalement statut,
+            LocalDateTime date) {
+        try {
+            HistoriqueStatutSignalement historique = HistoriqueStatutSignalement.builder()
+                    .signalement(signalement)
+                    .statutAvancementSignalement(statut)
+                    .date(date)
+                    .build();
+
+            historiqueRepository.save(historique);
+            log.info("Historique enregistré pour le signalement {}: statut {}", signalement.getId(),
+                    statut.getStatut());
+        } catch (Exception e) {
+            log.error("Erreur lors de l'enregistrement de l'historique du statut", e);
+        }
+    }
+
+    /**
+     * Récupérer l'historique des statuts d'un signalement
+     */
+    public List<HistoriqueStatutSignalement> getHistoriqueStatut(String signalementId) {
+        return historiqueRepository.findBySignalementIdOrderByDateDesc(signalementId);
+    }
+
+    /**
+     * Mapper l'historique vers DTO
+     */
+    public List<com.idp.dto.HistoriqueStatutSignalementResponse> mapHistoriqueToResponse(
+            List<HistoriqueStatutSignalement> historique) {
+        return historique.stream()
+                .map(h -> com.idp.dto.HistoriqueStatutSignalementResponse.builder()
+                        .id(h.getId())
+                        .signalementId(h.getSignalement().getId())
+                        .statut(h.getStatutAvancementSignalement().getStatut())
+                        .avancement(h.getStatutAvancementSignalement().getAvancement())
+                        .date(h.getDate())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     /**
