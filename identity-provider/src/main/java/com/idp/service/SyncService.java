@@ -57,7 +57,7 @@ public class SyncService {
     public void initFirestoreListeners() {
         log.info("🚀 Initialisation des listeners Firestore...");
         if (isOnline()) {
-            startFirestoreListeners();
+            // startFirestoreListeners();
         }
     }
 
@@ -680,28 +680,28 @@ public class SyncService {
     /**
      * Méthode de synchro automatique programmée (PostgreSQL → Firestore)
      */
-    @Scheduled(fixedDelay = 30000) // Toutes les 30 secondes
-    @Transactional
-    public void syncAllPendingItems() {
-        if (!isOnline()) {
-            log.info("⏸️  Sync automatique annulé - Firestore hors ligne");
-            return;
-        }
+    // @Scheduled(fixedDelay = 30000) // Toutes les 30 secondes
+    // @Transactional
+    // public void syncAllPendingItems() {
+    //     if (!isOnline()) {
+    //         log.info("⏸️  Sync automatique annulé - Firestore hors ligne");
+    //         return;
+    //     }
 
-        log.info("🔄 Début synchro automatique (PostgreSQL → Firestore)...");
+    //     log.info("🔄 Début synchro automatique (PostgreSQL → Firestore)...");
 
-        // 1. Synchroniser les utilisateurs en attente
-        List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
-        log.info("📋 {} utilisateurs en attente", pendingUsers.size());
+    //     // 1. Synchroniser les utilisateurs en attente
+    //     List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
+    //     log.info("📋 {} utilisateurs en attente", pendingUsers.size());
 
-        for (User user : pendingUsers) {
-            try {
-                syncUserToFirestore(user);
-            } catch (Exception e) {
-                log.error("❌ Erreur sync auto utilisateur {}: {}", user.getEmail(), e.getMessage());
-            }
-        }
+    //     for (User user : pendingUsers) {
+    //         try {
+    //             syncUserToFirestore(user);
+    //         } catch (Exception e) {
+    //             log.error("❌ Erreur sync auto utilisateur {}: {}", user.getEmail(), e.getMessage());
+    //         }
+    //     }
 
-        log.info("✅ Synchro automatique terminée");
-    }
+    //     log.info("✅ Synchro automatique terminée");
+    // }
 }

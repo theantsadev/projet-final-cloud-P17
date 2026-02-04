@@ -82,7 +82,9 @@ export const roadWorksAPI = signalementAPI
 // Users API (for managers)
 export const usersAPI = {
   getAll: () => api.get('/users'),
+  getAllLocked: () => api.get('/users/locked'),
   getById: (id) => api.get(`/users/${id}`),
   updateRole: (id, role) => api.put(`/users/${id}/role`, { role }),
+  unlockUser: (id) => api.post(`/users/${id}/unlock`),
   delete: (id) => api.delete(`/users/${id}`)
 }

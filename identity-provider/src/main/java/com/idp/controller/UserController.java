@@ -28,6 +28,36 @@ public class UserController {
     private final SyncService syncService; // ← AJOUTE CE SERVICE
 
     /**
+     * Lister tous les utilisateurs
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('MANAGER')")
+    @Operation(summary = "Lister tous les utilisateurs")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getUsers() {
+        log.info("Récupération de tous les utilisateurs");
+
+        List<User> users = userService.getUsers();
+
+        List<Map<String, Object>> response = new ArrayList<>();
+        for (User user : users) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", user.getId());
+            map.put("email", user.getEmail());
+            map.put("fullName", user.getFullName() != null ? user.getFullName() : "N/A");
+            map.put("phone", user.getPhone() != null ? user.getPhone() : "N/A");
+            map.put("isLocked", user.getIsLocked());
+            map.put("failedLoginAttempts", user.getFailedLoginAttempts());
+            map.put("lastFailedLogin", user.getLastFailedLogin());
+            map.put("role", user.getRole() != null ? user.getRole().getNom() : "N/A");
+            map.put("createdAt", user.getCreatedAt());
+            response.add(map);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(response,
+                "Total d'utilisateurs: " + users.size()));
+    }
+
+    /**
      * Lister tous les utilisateurs bloqués
      */
     @GetMapping("/locked")
@@ -103,5 +133,35 @@ public class UserController {
         response.put("updatedAt", user.getUpdatedAt());
 
         return ResponseEntity.ok(ApiResponse.success(response, "Détails utilisateur"));
+    }
+
+    /**
+     * Mettre à jour le rôle d'un utilisateur
+     */
+    @PutMapping("/{userId}/role")
+    @PreAuthorize("hasRole('MANAGER')")
+    @Operation(summary = "Mettre à jour le rôle d'un utilisateur")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateUserRole(
+            @PathVariable String userId,
+            @RequestBody Map<String, String> request) {
+        log.info("Mise à jour du rôle de l'utilisateur: {}", userId);
+
+        String newRoleName = request.get("role");
+        if (newRoleName == null || newRoleName.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("role_required", "Le rôle est obligatoire", 400));
+        }
+
+        User user = userService.getUserById(userId);
+        user = userService.updateUserRole(user, newRoleName);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", user.getId());
+        response.put("email", user.getEmail());
+        response.put("fullName", user.getFullName());
+        response.put("role", user.getRole() != null ? user.getRole().getNom() : "N/A");
+        response.put("message", "Rôle mis à jour avec succès");
+
+        return ResponseEntity.ok(ApiResponse.success(response, "Rôle mis à jour"));
     }
 }

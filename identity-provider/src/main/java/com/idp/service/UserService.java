@@ -16,6 +16,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final com.idp.repository.RoleRepository roleRepository;
 
     /**
      * Récupérer tous les utilisateurs bloqués
@@ -23,6 +24,11 @@ public class UserService {
     public List<User> getLockedUsers() {
         log.info("Récupération de tous les utilisateurs bloqués");
         return userRepository.findByIsLockedTrue();
+    }
+
+    public List<User> getUsers() {
+        log.info("Récupération de tous les utilisateurs");
+        return userRepository.findAll();
     }
 
     /**
@@ -64,5 +70,23 @@ public class UserService {
     public boolean isCurrentUser(String userId) {
         // À implémenter selon votre contexte de sécurité
         return true;
+    }
+
+    /**
+     * Mettre à jour le rôle d'un utilisateur
+     */
+    @Transactional
+    public User updateUserRole(User user, String newRoleName) {
+        log.info("Mise à jour du rôle de l'utilisateur {} avec le nouveau rôle: {}", user.getId(), newRoleName);
+
+        // Récupérer le rôle depuis la base de données
+        var newRole = roleRepository.findByNom(newRoleName.toUpperCase())
+                .orElseThrow(() -> new BusinessException("ROLE_NOT_FOUND", "Rôle non trouvé: " + newRoleName));
+
+        user.setRole(newRole);
+        User updatedUser = userRepository.save(user);
+
+        log.info("✅ Rôle de l'utilisateur {} mis à jour en {}", user.getId(), newRoleName);
+        return updatedUser;
     }
 }

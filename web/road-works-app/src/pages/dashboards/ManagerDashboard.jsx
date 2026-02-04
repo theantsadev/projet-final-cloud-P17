@@ -51,10 +51,11 @@ function ManagerDashboard() {
         id: u.id,
         name: u.fullName || u.email,
         email: u.email,
-        role: mapBackendRole(u.roles),
+        role: u?.role,  // Keep original role (string or object)
+        roleValue: mapBackendRoleObject(u?.role),  // For select value
         reportsCount: 0, // TODO: Add count from backend
         createdAt: u.createdAt || new Date().toISOString(),
-        locked: u.locked || false
+        locked: u.isLocked || false
       }))
 
       setReports(transformedReports)
@@ -87,14 +88,22 @@ function ManagerDashboard() {
     return statusMap[frontendStatus] || 'NOUVEAU'
   }
 
-  // Map backend roles to frontend role
-  const mapBackendRole = (roles) => {
-    if (!roles || roles.length === 0) return 'visitor'
-    const roleNames = roles.map(r => r.name || r)
-    if (roleNames.includes('MANAGER')) return 'manager'
-    if (roleNames.includes('USER')) return 'user'
-    return 'visitor'
+  // Map backend role object to frontend role
+  const mapBackendRoleObject = (role) => {
+    if (!role) return 'user'
+
+    // Handle both string and object formats
+    const roleName = typeof role === 'string'
+      ? role
+      : (role?.nom || 'user')
+
+    const lowerRole = String(roleName).toLowerCase()
+    if (lowerRole === 'manager') return 'manager'
+    if (lowerRole === 'user') return 'user'
+    return 'user'
   }
+
+
 
   // Determine priority based on budget
   const determinePriority = (budget) => {
@@ -149,7 +158,7 @@ function ManagerDashboard() {
       await usersAPI.updateRole(id, backendRole)
 
       setUsers(prev => prev.map(u =>
-        u.id === id ? { ...u, role: newRole } : u
+        u.id === id ? { ...u, roleValue: newRole } : u
       ))
 
       toast.success(`Rôle mis à jour: ${newRole}`)
@@ -158,7 +167,19 @@ function ManagerDashboard() {
       toast.error('Impossible de mettre à jour le rôle')
     }
   }
+  const unlockUser = async (id) => {
+    try {
+      const response = await usersAPI.unlockUser(id)
 
+      // Reload users list to show updated status
+      await loadData()
+
+      toast.success('Utilisateur débloqué avec succès')
+    } catch (error) {
+      console.error('Erreur lors du déblocage:', error)
+      toast.error(error.response?.data?.message || 'Impossible de débloquer l\'utilisateur')
+    }
+  }
   const deleteReport = async (id) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce signalement ?')) {
       return
@@ -336,7 +357,7 @@ function ManagerDashboard() {
               <div className="card-body" style={{ padding: 0 }}>
                 <ul className="list-group">
                   {users
-                    .filter(u => u.role !== 'visitor')
+                    .filter(u => u.roleValue !== 'visitor')
                     .sort((a, b) => b.reportsCount - a.reportsCount)
                     .slice(0, 5)
                     .map((user, index) => (
@@ -478,7 +499,7 @@ function ManagerDashboard() {
                     </thead>
                     <tbody>
                       {filteredUsers.map(u => {
-                        const roleBadge = getRoleBadge(u.role)
+                        const roleBadge = getRoleBadge(u.roleValue)
                         return (
                           <tr key={u.id}>
                             <td>
@@ -497,18 +518,28 @@ function ManagerDashboard() {
                               <select
                                 className="form-select"
                                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: 'auto' }}
-                                value={u.role}
+                                value={u.roleValue}
                                 onChange={e => updateUserRole(u.id, e.target.value)}
                               >
                                 <option value="user">Utilisateur</option>
                                 <option value="manager">Manager</option>
                               </select>
                             </td>
+
                             <td>{u.reportsCount}</td>
                             <td>{new Date(u.createdAt).toLocaleDateString('fr-FR')}</td>
                             <td>
                               <div className="flex gap-1">
                                 <button className="btn btn-secondary btn-sm" title="Voir le profil">Profil</button>
+                                {u.locked && (
+                                  <button
+                                    className="btn btn-success btn-sm"
+                                    title="Débloquer"
+                                    onClick={() => unlockUser(u.id)}
+                                  >
+                                    Débloquer
+                                  </button>
+                                )}
                                 {u.role !== 'manager' && (
                                   <button className="btn btn-danger btn-sm" title="Désactiver">Désact.</button>
                                 )}

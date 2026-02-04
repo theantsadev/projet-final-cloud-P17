@@ -168,24 +168,7 @@ function RegisterPage() {
           {errors.confirmPassword && <span className="form-error">{errors.confirmPassword}</span>}
         </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="role">Type de compte</label>
-          <select
-            id="role"
-            name="role"
-            className="form-select"
-            value={formData.role}
-            onChange={handleChange}
-            disabled={isLoading}
-          >
-            <option value="visitor">Visiteur - Consultation publique</option>
-            <option value="manager">Manager - Gestion complète</option>
-          </select>
-          <small className="text-muted text-small mt-1" style={{ display: 'block' }}>
-            {formData.role === 'visitor' && '🌐 Accès en lecture seule à la carte des signalements'}
-            {formData.role === 'manager' && '👤 Accès complet : gestion signalements, utilisateurs et synchronisation'}
-          </small>
-        </div>
+
 
         <div className="form-group">
           <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
