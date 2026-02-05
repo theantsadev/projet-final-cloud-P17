@@ -5,6 +5,7 @@ import com.idp.dto.SignalementRequest;
 import com.idp.dto.SignalementResponse;
 import com.idp.dto.SignalementStatisticsResponse;
 import com.idp.service.SignalementService;
+import com.idp.service.SyncService;
 import com.idp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.Map;
 public class SignalementController {
 
     private final SignalementService signalementService;
+    private final SyncService syncService;
     private final UserRepository userRepository;
 
     /**
@@ -260,6 +262,20 @@ public class SignalementController {
     public ResponseEntity<ApiResponse<?>> testSyncToFirebase() {
 
         log.info("TEST: Synchronisation vers Firebase");
+        syncService.invalidateOnlineCache();
+        
+        // Vérifier la connexion une fois pour peupler le cache
+        long start = System.currentTimeMillis();
+        boolean isOnline = syncService.isOnline();
+        long duration = System.currentTimeMillis() - start;
+        
+        if (!isOnline) {
+            log.warn("❌ Firebase offline - Impossible de syncer");
+            return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("Firebase offline - Synchronisation impossible", "FIREBASE_UNAVAILABLE", 503));
+        }
+        
+        log.info("✅ Connexion Firebase OK en {}ms", duration);
         signalementService.synchronizeAllPending();
 
         return ResponseEntity.ok(ApiResponse.success(
@@ -274,6 +290,7 @@ public class SignalementController {
     public ResponseEntity<ApiResponse<?>> testSyncFromFirebase() {
 
         log.info("TEST: Récupération des données depuis Firebase");
+        syncService.invalidateOnlineCache();
         List<SignalementResponse> signalements = signalementService.syncFromFirebase();
 
         return ResponseEntity.ok(ApiResponse.success(

@@ -55,8 +55,8 @@ public class SyncService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     // Cache du statut de connexion (évite les appels répétés lents)
-    private static final long CACHE_DURATION_MS = 10_000; // 10 secondes
-    private static final int CONNECTION_TIMEOUT_SECONDS = 3; // 3 secondes max pour vérifier
+    private static final long CACHE_DURATION_MS = 5_000; // 5 secondes (réduit pour réagir plus vite au changement de connexion)
+    private static final int CONNECTION_TIMEOUT_SECONDS = 10; // 10 secondes max pour vérifier (augmenté)
     private final AtomicBoolean cachedOnlineStatus = new AtomicBoolean(false);
     private final AtomicLong lastOnlineCheck = new AtomicLong(0);
 
@@ -404,15 +404,24 @@ public class SyncService {
      */
     private boolean checkFirebaseConnectionWithTimeout() {
         try {
+            log.debug("🔍 Vérification connexion Firebase (timeout: {} sec)...", CONNECTION_TIMEOUT_SECONDS);
             // Utiliser un Future avec timeout pour éviter les blocages longs
             ApiFuture<QuerySnapshot> future = firestore.collection(FIRESTORE_USERS_COLLECTION).limit(1).get();
-            future.get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            QuerySnapshot result = future.get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            log.info("✅ Firebase ONLINE - {} documents dans collection users", result.size());
             return true;
         } catch (TimeoutException e) {
-            log.debug("⏱️ Timeout lors de la vérification Firebase ({} secondes)", CONNECTION_TIMEOUT_SECONDS);
+            log.warn("⏱️ Timeout lors de la vérification Firebase ({} secondes) - Firebase probablement inaccessible", CONNECTION_TIMEOUT_SECONDS);
+            return false;
+        } catch (ExecutionException e) {
+            log.warn("❌ Firebase ExecutionException: {}", e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            return false;
+        } catch (InterruptedException e) {
+            log.warn("❌ Firebase InterruptedException: {}", e.getMessage());
+            Thread.currentThread().interrupt();
             return false;
         } catch (Exception e) {
-            log.debug("❌ Firebase offline: {}", e.getMessage());
+            log.warn("❌ Firebase offline - Exception: {} - {}", e.getClass().getSimpleName(), e.getMessage());
             return false;
         }
     }
@@ -431,7 +440,13 @@ public class SyncService {
     public void syncUserToFirestore(User user) {
         log.info("📤 Sync PostgreSQL→Firestore - User: {}", user.getEmail());
 
-        if (!isOnline()) {
+        boolean online = isOnline();
+        log.info("   🌐 isOnline() = {} (cache: lastCheck={}ms ago)", 
+            online, 
+            System.currentTimeMillis() - lastOnlineCheck.get());
+        
+        if (!online) {
+            log.warn("   ❌ Firebase offline - User {} reste PENDING", user.getEmail());
             user.setSyncStatus("PENDING");
             userRepository.save(user);
             return;

@@ -128,16 +128,28 @@ public class UserService {
     @Transactional
     public void synchronizeAllPending() {
         List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
+        log.info("🔄 Synchronisation de {} utilisateurs PENDING vers Firebase", pendingUsers.size());
+        
+        if (pendingUsers.isEmpty()) {
+            log.info("⚠️ Aucun utilisateur PENDING à synchroniser");
+            return;
+        }
+        
+        // Lister les emails pour debug
+        pendingUsers.forEach(u -> log.info("   - User PENDING: {} (syncStatus={})", u.getEmail(), u.getSyncStatus()));
 
         for (User user : pendingUsers) {
-            if (!user.getRole().getNom().equals("MANAGER")) {
-                try {
-                    syncService.syncUserToFirestore(user);
-                } catch (Exception e) {
-                    log.error("Erreur lors de la synchronisation de l'utilisateur {}", user.getId(), e);
-                }
+            try {
+                log.info("📤 Sync user {} (role: {}, syncStatus: {})", 
+                    user.getEmail(), 
+                    user.getRole() != null ? user.getRole().getNom() : "NULL", 
+                    user.getSyncStatus());
+                syncService.syncUserToFirestore(user);
+                log.info("✅ User {} synchronisé avec succès", user.getEmail());
+            } catch (Exception e) {
+                log.error("❌ Erreur lors de la synchronisation de l'utilisateur {}: {}", user.getId(), e.getMessage(), e);
             }
-
         }
+        log.info("✅ Synchronisation terminée");
     }
 }

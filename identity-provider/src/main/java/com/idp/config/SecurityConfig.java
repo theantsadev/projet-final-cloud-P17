@@ -42,6 +42,7 @@ public class SecurityConfig {
                                                                 "/api/security/**", // Paramètres sécurité
                                                                 "/api/sync/**", // Synchronisation
                                                                 "/api/signalements/test/**", // TEST endpoints
+                                                                 "/api/users/test/sync-firebase-push",
                                                                                              // signalement
                                                                 "/api/signalements/geo/**", // PostGIS endpoints
                                                                 "/api/signalements/statut/**", // Public statut endpoint

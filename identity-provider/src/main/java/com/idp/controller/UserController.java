@@ -173,6 +173,7 @@ public class UserController {
     @Operation(summary = "Synchroniser les utilisateurs vers Firebase")
     public ResponseEntity<ApiResponse<?>> syncPushAll() {
         log.info("Synchronisation de tous les utilisateurs vers Firebase");
+        syncService.invalidateOnlineCache(); // Force une nouvelle vérification
         userService.synchronizeAllPending();
         return ResponseEntity.ok(ApiResponse.success("Tous les utilisateurs ont été synchronisés",
                 "Synchronisation vers Firebase effectuée"));
@@ -186,6 +187,7 @@ public class UserController {
     @Operation(summary = "Synchroniser les utilisateurs depuis Firebase")
     public ResponseEntity<ApiResponse<?>> syncPullAll() {
         log.info("Synchronisation des utilisateurs depuis Firebase");
+        syncService.invalidateOnlineCache(); // Force une nouvelle vérification
         List<User> users = userService.getUsers();
         return ResponseEntity.ok(ApiResponse.success(users, "Synchronisation depuis Firebase effectuée"));
     }
@@ -197,6 +199,20 @@ public class UserController {
     @Operation(summary = "TEST: Synchroniser les utilisateurs vers Firebase")
     public ResponseEntity<ApiResponse<?>> testSyncToFirebase() {
         log.info("TEST: Synchronisation des utilisateurs vers Firebase");
+        syncService.invalidateOnlineCache();
+
+        // Vérifier la connexion une fois pour peupler le cache
+        long start = System.currentTimeMillis();
+        boolean isOnline = syncService.isOnline();
+        long duration = System.currentTimeMillis() - start;
+
+        if (!isOnline) {
+            log.warn("❌ Firebase offline - Impossible de syncer");
+            return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("Firebase offline - Synchronisation impossible", "FIREBASE_UNAVAILABLE", 503));
+        }
+
+        log.info("✅ Connexion Firebase OK en {}ms", duration);
         userService.synchronizeAllPending();
         return ResponseEntity.ok(ApiResponse.success(
                 null,
@@ -204,12 +220,14 @@ public class UserController {
     }
 
     /**
-     * TEST ENDPOINT - Récupérer les utilisateurs depuis Firebase SANS authentification
+     * TEST ENDPOINT - Récupérer les utilisateurs depuis Firebase SANS
+     * authentification
      */
     @PostMapping("/test/sync-firebase-pull")
     @Operation(summary = "TEST: Synchroniser les utilisateurs depuis Firebase")
     public ResponseEntity<ApiResponse<?>> testSyncFromFirebase() {
         log.info("TEST: Récupération des utilisateurs depuis Firebase");
+        syncService.invalidateOnlineCache(); // Force une nouvelle vérification
         List<User> users = userService.getUsers();
         return ResponseEntity.ok(ApiResponse.success(
                 users,
