@@ -1,12 +1,13 @@
 package com.idp.service;
 
+import com.idp.entity.Signalement;
 import com.idp.entity.User;
 import com.idp.exception.BusinessException;
 import com.idp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional;import
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final com.idp.repository.RoleRepository roleRepository;
+    private final SyncService syncService;
 
     /**
      * Récupérer tous les utilisateurs bloqués
@@ -88,5 +90,18 @@ public class UserService {
 
         log.info("✅ Rôle de l'utilisateur {} mis à jour en {}", user.getId(), newRoleName);
         return updatedUser;
+    }
+
+    @Transactional
+    public void synchronizeAllPending() {
+        List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
+
+        for (User user : pendingUsers) {
+            try {
+                syncService.synchronizeToFirebase(user);
+            } catch (Exception e) {
+                log.error("Erreur lors de la synchronisation de l'utilisateur {}", user.getId(), e);
+            }
+        }
     }
 }
