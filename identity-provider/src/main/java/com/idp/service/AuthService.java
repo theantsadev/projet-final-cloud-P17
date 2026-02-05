@@ -62,7 +62,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
-        user.setRole(roleUser);  // ← Assigner le rôle USER
+        user.setRole(roleUser); // ← Assigner le rôle USER
         user.setFirestoreId("user_" + UUID.randomUUID().toString());
         user.setSyncStatus("PENDING");
         user.setIsActive(true);

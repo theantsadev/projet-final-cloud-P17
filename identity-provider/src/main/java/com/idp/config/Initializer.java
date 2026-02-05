@@ -2,6 +2,8 @@ package com.idp.config;
 
 import com.idp.entity.Role;
 import com.idp.repository.RoleRepository;
+import com.idp.service.UserService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -11,9 +13,10 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class RoleInitializer implements ApplicationRunner {
+public class Initializer implements ApplicationRunner {
 
     private final RoleRepository roleRepository;
+    private final UserService userService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -24,6 +27,10 @@ public class RoleInitializer implements ApplicationRunner {
         createRoleIfNotExists("MANAGER", "Rôle gestionnaire");
 
         log.info("✅ Initialisation des rôles complétée");
+
+        // Créer le manager par défaut s'il n'existe pas
+        log.info("Création du gestionnaire par défaut...");
+        userService.createManagerIfNotExists();
     }
 
     private void createRoleIfNotExists(String nom, String description) {

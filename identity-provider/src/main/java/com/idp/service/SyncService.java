@@ -25,6 +25,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +53,12 @@ public class SyncService {
 
     // Formateur de dates
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    // Cache du statut de connexion (évite les appels répétés lents)
+    private static final long CACHE_DURATION_MS = 10_000; // 10 secondes
+    private static final int CONNECTION_TIMEOUT_SECONDS = 3; // 3 secondes max pour vérifier
+    private final AtomicBoolean cachedOnlineStatus = new AtomicBoolean(false);
+    private final AtomicLong lastOnlineCheck = new AtomicLong(0);
 
     /**
      * Initialiser les listeners Firestore
@@ -367,15 +377,51 @@ public class SyncService {
     }
 
     /**
-     * Vérifie la connexion à Firestore
+     * Vérifie la connexion à Firestore avec cache et timeout
+     * Évite les appels répétés lents quand il n'y a pas de connexion
      */
     public boolean isOnline() {
+        long now = System.currentTimeMillis();
+        long lastCheck = lastOnlineCheck.get();
+
+        // Utiliser le cache si la dernière vérification est récente
+        if (now - lastCheck < CACHE_DURATION_MS) {
+            return cachedOnlineStatus.get();
+        }
+
+        // Vérifier la connexion avec timeout
+        boolean online = checkFirebaseConnectionWithTimeout();
+
+        // Mettre à jour le cache
+        cachedOnlineStatus.set(online);
+        lastOnlineCheck.set(now);
+
+        return online;
+    }
+
+    /**
+     * Vérifie la connexion Firebase avec un timeout court
+     */
+    private boolean checkFirebaseConnectionWithTimeout() {
         try {
-            firestore.listCollections();
+            // Utiliser un Future avec timeout pour éviter les blocages longs
+            ApiFuture<QuerySnapshot> future = firestore.collection(FIRESTORE_USERS_COLLECTION).limit(1).get();
+            future.get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             return true;
+        } catch (TimeoutException e) {
+            log.debug("⏱️ Timeout lors de la vérification Firebase ({} secondes)", CONNECTION_TIMEOUT_SECONDS);
+            return false;
         } catch (Exception e) {
+            log.debug("❌ Firebase offline: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Force une nouvelle vérification de la connexion (invalide le cache)
+     */
+    public void invalidateOnlineCache() {
+        lastOnlineCheck.set(0);
     }
 
     /**

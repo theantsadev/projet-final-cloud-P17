@@ -164,4 +164,55 @@ public class UserController {
 
         return ResponseEntity.ok(ApiResponse.success(response, "Rôle mis à jour"));
     }
+
+    /**
+     * Synchroniser tous les utilisateurs non synchronisés vers Firebase
+     */
+    @PostMapping("/sync/push-all")
+    @PreAuthorize("hasAnyRole('MANAGER')")
+    @Operation(summary = "Synchroniser les utilisateurs vers Firebase")
+    public ResponseEntity<ApiResponse<?>> syncPushAll() {
+        log.info("Synchronisation de tous les utilisateurs vers Firebase");
+        userService.synchronizeAllPending();
+        return ResponseEntity.ok(ApiResponse.success("Tous les utilisateurs ont été synchronisés",
+                "Synchronisation vers Firebase effectuée"));
+    }
+
+    /**
+     * Synchroniser les utilisateurs depuis Firebase
+     */
+    @PostMapping("/sync/pull-all")
+    @PreAuthorize("hasAnyRole('MANAGER')")
+    @Operation(summary = "Synchroniser les utilisateurs depuis Firebase")
+    public ResponseEntity<ApiResponse<?>> syncPullAll() {
+        log.info("Synchronisation des utilisateurs depuis Firebase");
+        List<User> users = userService.getUsers();
+        return ResponseEntity.ok(ApiResponse.success(users, "Synchronisation depuis Firebase effectuée"));
+    }
+
+    /**
+     * TEST ENDPOINT - Synchroniser vers Firebase SANS authentification
+     */
+    @PostMapping("/test/sync-firebase-push")
+    @Operation(summary = "TEST: Synchroniser les utilisateurs vers Firebase")
+    public ResponseEntity<ApiResponse<?>> testSyncToFirebase() {
+        log.info("TEST: Synchronisation des utilisateurs vers Firebase");
+        userService.synchronizeAllPending();
+        return ResponseEntity.ok(ApiResponse.success(
+                null,
+                "✅ Sync PUSH à Firebase - Tous les utilisateurs non synchronisés ont été envoyés"));
+    }
+
+    /**
+     * TEST ENDPOINT - Récupérer les utilisateurs depuis Firebase SANS authentification
+     */
+    @PostMapping("/test/sync-firebase-pull")
+    @Operation(summary = "TEST: Synchroniser les utilisateurs depuis Firebase")
+    public ResponseEntity<ApiResponse<?>> testSyncFromFirebase() {
+        log.info("TEST: Récupération des utilisateurs depuis Firebase");
+        List<User> users = userService.getUsers();
+        return ResponseEntity.ok(ApiResponse.success(
+                users,
+                "✅ Sync PULL depuis Firebase - " + users.size() + " utilisateurs récupérés"));
+    }
 }

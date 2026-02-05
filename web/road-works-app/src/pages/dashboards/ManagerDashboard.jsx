@@ -198,6 +198,63 @@ function ManagerDashboard() {
     }
   }
 
+  // Sync Functions
+  const syncUsersPush = async () => {
+    try {
+      setLoading(true)
+      await usersAPI.syncPushAll()
+      toast.success('✅ Synchronisation PUSH des utilisateurs vers Firebase réussie')
+      await loadData()
+    } catch (error) {
+      console.error('Erreur sync users push:', error)
+      toast.error('Impossible de synchroniser les utilisateurs vers Firebase')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const syncUsersPull = async () => {
+    try {
+      setLoading(true)
+      await usersAPI.syncPullAll()
+      toast.success('✅ Synchronisation PULL des utilisateurs depuis Firebase réussie')
+      await loadData()
+    } catch (error) {
+      console.error('Erreur sync users pull:', error)
+      toast.error('Impossible de synchroniser les utilisateurs depuis Firebase')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const syncSignalementsPush = async () => {
+    try {
+      setLoading(true)
+      await signalementAPI.syncPushAll()
+      toast.success('✅ Synchronisation PUSH des signalements vers Firebase réussie')
+      await loadData()
+    } catch (error) {
+      console.error('Erreur sync signalements push:', error)
+      toast.error('Impossible de synchroniser les signalements vers Firebase')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const syncSignalementsPull = async () => {
+    try {
+      setLoading(true)
+      await signalementAPI.syncPullAll()
+      toast.success('✅ Synchronisation PULL des signalements depuis Firebase réussie')
+      await loadData()
+    } catch (error) {
+      console.error('Erreur sync signalements pull:', error)
+      toast.error('Impossible de synchroniser les signalements depuis Firebase')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getStatusBadge = (status) => {
     const badges = {
       'pending': { class: 'badge-pending', text: 'En attente' },
@@ -298,6 +355,78 @@ function ManagerDashboard() {
                 <div className="stat-value">{stats.totalUsers}</div>
               </div>
             </div>
+          </div>
+
+          {/* Sync Controls */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            <button
+              onClick={syncUsersPush}
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                transition: 'all 0.3s'
+              }}
+            >
+              📤 Sync Users → Firebase
+            </button>
+            <button
+              onClick={syncUsersPull}
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: '#06b6d4',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                transition: 'all 0.3s'
+              }}
+            >
+              📥 Sync Users ← Firebase
+            </button>
+            <button
+              onClick={syncSignalementsPush}
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                transition: 'all 0.3s'
+              }}
+            >
+              📤 Sync Signalements → Firebase
+            </button>
+            <button
+              onClick={syncSignalementsPull}
+              disabled={loading}
+              style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '500',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                transition: 'all 0.3s'
+              }}
+            >
+              📥 Sync Signalements ← Firebase
+            </button>
           </div>
 
           {/* Main Content */}
@@ -463,8 +592,8 @@ function ManagerDashboard() {
                             <td>{new Date(report.createdAt).toLocaleDateString('fr-FR')}</td>
                             <td>
                               <div className="flex gap-1">
-                                <button 
-                                  className="btn btn-secondary btn-sm" 
+                                <button
+                                  className="btn btn-secondary btn-sm"
                                   title="Voir"
                                   onClick={() => navigate(`/manager/signalements/${report.id}`)}
                                 >

@@ -6,10 +6,12 @@ import com.idp.exception.BusinessException;
 import com.idp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;import
-
+import org.springframework.transaction.annotation.Transactional;
+import com.idp.service.SyncService;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,37 @@ public class UserService {
     private final UserRepository userRepository;
     private final com.idp.repository.RoleRepository roleRepository;
     private final SyncService syncService;
+    private final PasswordEncoder passwordEncoder;
+
+    public User createManagerIfNotExists() {
+        String email = "manager@gmail.com";
+        String password = "manager123";
+
+        log.info("Vérification de l'existence du gestionnaire avec l'email: {}", email);
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            log.info("Gestionnaire non trouvé. Création d'un nouvel utilisateur gestionnaire.");
+
+            var role = roleRepository.findByNom("MANAGER")
+                    .orElseThrow(() -> new BusinessException("ROLE_NOT_FOUND", "Rôle MANAGER non trouvé"));
+
+            User manager = User.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email(email)
+                    .passwordHash(passwordEncoder.encode(password))
+                    .fullName("Manager")
+                    .role(role)
+                    .isActive(true)
+                    .isLocked(false)
+                    .failedLoginAttempts(0)
+                    .syncStatus("PENDING")
+                    .firestoreId("user_manager_" + UUID.randomUUID().toString())
+                    .build();
+
+            User savedManager = userRepository.save(manager);
+            log.info("✅ Gestionnaire créé avec succès: {} (email: {})", savedManager.getId(), email);
+            return savedManager;
+        });
+    }
 
     /**
      * Récupérer tous les utilisateurs bloqués
@@ -97,11 +130,14 @@ public class UserService {
         List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
 
         for (User user : pendingUsers) {
-            try {
-                syncService.synchronizeToFirebase(user);
-            } catch (Exception e) {
-                log.error("Erreur lors de la synchronisation de l'utilisateur {}", user.getId(), e);
+            if (!user.getRole().getNom().equals("MANAGER")) {
+                try {
+                    syncService.syncUserToFirestore(user);
+                } catch (Exception e) {
+                    log.error("Erreur lors de la synchronisation de l'utilisateur {}", user.getId(), e);
+                }
             }
+
         }
     }
 }

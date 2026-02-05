@@ -73,7 +73,13 @@ export const signalementAPI = {
   update: (id, data) => api.put(`/signalements/${id}`, data),
   updateStatus: (id, statut) => api.patch(`/signalements/${id}/statut?statut=${statut}`),
   delete: (id) => api.delete(`/signalements/${id}`),
-  getStatistics: () => api.get('/signalements/stats/dashboard')
+  getStatistics: () => api.get('/signalements/stats/dashboard'),
+  // Sync endpoints
+  syncPushAll: () => api.post('/signalements/sync/push-all'),
+  syncPullAll: () => api.post('/signalements/sync/pull-all'),
+  // Test endpoints
+  testSyncPush: () => api.post('/signalements/test/sync-firebase-push'),
+  testSyncPull: () => api.post('/signalements/test/sync-firebase-pull')
 }
 
 // Road Works API (alias for backward compatibility)
@@ -86,5 +92,11 @@ export const usersAPI = {
   getById: (id) => api.get(`/users/${id}`),
   updateRole: (id, role) => api.put(`/users/${id}/role`, { role }),
   unlockUser: (id) => api.post(`/users/${id}/unlock`),
-  delete: (id) => api.delete(`/users/${id}`)
+  delete: (id) => api.delete(`/users/${id}`),
+  // Sync endpoints
+  syncPushAll: () => api.post('/users/sync/push-all'),
+  syncPullAll: () => api.post('/users/sync/pull-all'),
+  // Test endpoints
+  testSyncPush: () => api.post('/users/test/sync-firebase-push'),
+  testSyncPull: () => api.post('/users/test/sync-firebase-pull')
 }

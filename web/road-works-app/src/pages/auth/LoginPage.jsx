@@ -4,28 +4,28 @@ import { useAuthStore } from '../../stores/authStore'
 import toast from 'react-hot-toast'
 
 function LoginPage() {
-  const [email, setEmail] = useState('utilisateur@gmail.com')
-  const [password, setPassword] = useState('utilisateur')
+  const [email, setEmail] = useState('manager@gmail.com')
+  const [password, setPassword] = useState('manager123')
   const [errors, setErrors] = useState({})
-  
+
   const { login, quickLogin, isLoading, error, clearError } = useAuthStore()
   const navigate = useNavigate()
 
   const validateForm = () => {
     const newErrors = {}
-    
+
     if (!email) {
       newErrors.email = 'L\'email est requis'
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Email invalide'
     }
-    
+
     if (!password) {
       newErrors.password = 'Le mot de passe est requis'
     } else if (password.length < 6) {
       newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -33,22 +33,22 @@ function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     clearError()
-    
+
     if (!validateForm()) return
-    
+
     try {
       const result = await login(email, password)
-      
+
       if (result.success) {
         toast.success('Connexion réussie!')
-        
+
         // Redirect based on role
         const redirects = {
           visitor: '/visitor',
           manager: '/manager'
         }
         console.log('User role:', result.user.role)
-        
+
         // Use setTimeout to ensure state is updated before navigation
         setTimeout(() => {
           navigate(redirects[result.user.role] || '/visitor', { replace: true })
@@ -61,15 +61,15 @@ function LoginPage() {
 
   const handleQuickLogin = (role) => {
     const result = quickLogin(role)
-    
+
     if (result.success) {
       toast.success(`Connecté en tant que ${role}`)
-      
+
       const redirects = {
         visitor: '/visitor',
         manager: '/manager'
       }
-      
+
       // Use setTimeout to ensure state is updated before navigation
       setTimeout(() => {
         navigate(redirects[role], { replace: true })
@@ -132,8 +132,8 @@ function LoginPage() {
           {errors.password && <span className="form-error">{errors.password}</span>}
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           className="btn btn-primary btn-block btn-lg"
           disabled={isLoading}
         >
@@ -159,7 +159,7 @@ function LoginPage() {
       <div className="quick-login">
         <div className="quick-login-title">Connexion rapide (Test)</div>
         <div className="quick-login-buttons">
-          <button 
+          <button
             type="button"
             className="btn btn-secondary"
             onClick={() => handleQuickLogin('visitor')}
@@ -167,7 +167,7 @@ function LoginPage() {
           >
             🌐 Mode Visiteur
           </button>
-          <button 
+          <button
             type="button"
             className="btn btn-success"
             onClick={() => handleQuickLogin('manager')}
