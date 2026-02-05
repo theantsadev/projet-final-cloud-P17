@@ -90,15 +90,7 @@ function MainLayout() {
             )}
           </div>
 
-          <div className="nav-section">
-            <div className="nav-section-title">Statistiques</div>
-            <div className="nav-link" style={{ cursor: 'default' }}>
-              <span className="nav-link-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg>
-              </span>
-              <span className="nav-link-text">Vue d'ensemble</span>
-            </div>
-          </div>
+
         </nav>
 
         <div className="sidebar-footer">

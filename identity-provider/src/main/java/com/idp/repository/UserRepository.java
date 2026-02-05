@@ -17,6 +17,7 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     List<User> findByIsLockedTrue();
 
+    
     @Query("SELECT u FROM User u WHERE u.lastFailedLogin < CURRENT_TIMESTAMP - 30 * 60 * 1000 AND u.isLocked = true")
     List<User> findExpiredLockouts();
 }
