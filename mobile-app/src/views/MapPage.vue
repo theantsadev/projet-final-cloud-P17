@@ -5,7 +5,7 @@
         <ion-buttons slot="start">
           <ion-menu-button></ion-menu-button>
         </ion-buttons>
-        <ion-title>Carte - Antananarivo</ion-title>
+        <ion-title>Carte - Signalements</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="refreshSignalements">
             <ion-icon :icon="refreshOutline"></ion-icon>
@@ -15,15 +15,75 @@
     </ion-header>
 
     <ion-content>
-      <!-- Carte Leaflet -->
-      <div id="map" ref="mapContainer"></div>
+      <!-- Récapitulatif -->
+      <ion-card v-if="recap" class="recap-card">
+        <ion-card-content>
+          <!-- Compteurs de statuts -->
+          <div class="recap-grid">
+            <div class="recap-item">
+              <span class="recap-number">{{ recap.total }}</span>
+              <span class="recap-label">Total</span>
+            </div>
+            <div class="recap-item">
+              <span class="recap-number text-primary">{{ recap.nouveaux }}</span>
+              <span class="recap-label">Nouveaux</span>
+            </div>
+            <div class="recap-item">
+              <span class="recap-number text-warning">{{ recap.enCours }}</span>
+              <span class="recap-label">En cours</span>
+            </div>
+            <div class="recap-item">
+              <span class="recap-number text-success">{{ recap.termines }}</span>
+              <span class="recap-label">Terminés</span>
+            </div>
+          </div>
+          
+          <!-- Statistiques détaillées -->
+          <div class="recap-stats-row">
+            <div class="recap-stat">
+              <span class="stat-label">Surface totale</span>
+              <span class="stat-value">{{ (recap.totalSurfaceM2 || 0).toFixed(1) }} m²</span>
+            </div>
+            <div class="recap-stat">
+              <span class="stat-label">Budget total</span>
+              <span class="stat-value">{{ ((recap.totalBudget || 0) / 1000000).toFixed(1) }}M Ar</span>
+            </div>
+            <div class="recap-stat">
+              <span class="stat-label">Avancement moyen</span>
+              <span class="stat-value">{{ recap.averageAvancement || 0 }}%</span>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
 
-      <!-- Bouton flottant pour ajouter un signalement -->
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-        <ion-fab-button color="success" @click="startAddSignalement">
-          <ion-icon :icon="addOutline"></ion-icon>
-        </ion-fab-button>
-      </ion-fab>
+      <!-- Filtre et contrôles -->
+      <div class="card-header" style="padding: 16px; background: white; border-bottom: 1px solid #e5e7eb;">
+        <div class="controls-row">
+          <div class="btn-group">
+            <ion-button 
+              @click="filter = 'tous'"
+              :fill="filter === 'tous' ? 'solid' : 'outline'"
+              size="small"
+            >
+              Tous
+            </ion-button>
+            <ion-button 
+              @click="filter = 'mes'"
+              :fill="filter === 'mes' ? 'solid' : 'outline'"
+              size="small"
+            >
+              Mes signalements
+            </ion-button>
+          </div>
+          <ion-button color="success" @click="startAddSignalement" size="small">
+            <ion-icon :icon="addOutline" slot="start"></ion-icon>
+            Ajouter
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- Carte -->
+      <div id="map" ref="mapContainer" class="map-container"></div>
 
       <!-- Loader -->
       <ion-loading :is-open="isLoading" message="Chargement..."></ion-loading>
@@ -43,12 +103,12 @@
       </ion-header>
       <ion-content class="ion-padding">
         <form @submit.prevent="submitSignalement">
-          <!-- Coordonnées -->
+          <!-- Coordonnées sélectionnées -->
           <ion-card color="light">
             <ion-card-content>
               <p><strong>Position sélectionnée :</strong></p>
-              <p>Latitude: {{ newSignalement.latitude.toFixed(6) }}</p>
-              <p>Longitude: {{ newSignalement.longitude.toFixed(6) }}</p>
+              <p>Latitude: {{ selectedMapPoint?.lat?.toFixed(6) || 'Cliquez sur la carte' }}</p>
+              <p>Longitude: {{ selectedMapPoint?.lng?.toFixed(6) || 'Cliquez sur la carte' }}</p>
             </ion-card-content>
           </ion-card>
 
@@ -57,23 +117,9 @@
             <ion-label position="stacked">Titre *</ion-label>
             <ion-input 
               v-model="newSignalement.titre" 
-              placeholder="Ex: Nid de poule dangereux"
+              placeholder="Décrire le problème..."
               required
             ></ion-input>
-          </ion-item>
-
-          <!-- Type de problème -->
-          <ion-item>
-            <ion-label position="stacked">Type de problème *</ion-label>
-            <ion-select v-model="newSignalement.typeProbleme" placeholder="Sélectionner">
-              <ion-select-option value="NID_DE_POULE">Nid de poule</ion-select-option>
-              <ion-select-option value="FISSURE">Fissure</ion-select-option>
-              <ion-select-option value="INONDATION">Inondation</ion-select-option>
-              <ion-select-option value="OBSTACLE">Obstacle</ion-select-option>
-              <ion-select-option value="ECLAIRAGE">Éclairage</ion-select-option>
-              <ion-select-option value="SIGNALISATION">Signalisation</ion-select-option>
-              <ion-select-option value="AUTRE">Autre</ion-select-option>
-            </ion-select>
           </ion-item>
 
           <!-- Description -->
@@ -81,29 +127,9 @@
             <ion-label position="stacked">Description</ion-label>
             <ion-textarea 
               v-model="newSignalement.description" 
-              placeholder="Décrivez le problème..."
+              placeholder="Détails supplémentaires..."
               :rows="3"
             ></ion-textarea>
-          </ion-item>
-
-          <!-- Adresse -->
-          <ion-item>
-            <ion-label position="stacked">Adresse</ion-label>
-            <ion-input 
-              v-model="newSignalement.adresse" 
-              placeholder="Ex: Avenue de l'Indépendance"
-            ></ion-input>
-          </ion-item>
-
-          <!-- Priorité -->
-          <ion-item>
-            <ion-label position="stacked">Priorité</ion-label>
-            <ion-select v-model="newSignalement.priorite" placeholder="Normale">
-              <ion-select-option value="BASSE">Basse</ion-select-option>
-              <ion-select-option value="NORMALE">Normale</ion-select-option>
-              <ion-select-option value="HAUTE">Haute</ion-select-option>
-              <ion-select-option value="URGENTE">Urgente</ion-select-option>
-            </ion-select>
           </ion-item>
 
           <!-- Bouton soumettre -->
@@ -111,9 +137,9 @@
             expand="block" 
             type="submit" 
             class="ion-margin-top"
-            :disabled="!isFormValid || signalementStore.isLoading"
+            :disabled="!isFormValid || isLoading"
           >
-            <ion-spinner v-if="signalementStore.isLoading" name="crescent"></ion-spinner>
+            <ion-spinner v-if="isLoading" name="crescent"></ion-spinner>
             <span v-else>Envoyer le signalement</span>
           </ion-button>
         </form>
@@ -124,57 +150,52 @@
     <ion-modal :is-open="showDetailModal" @didDismiss="closeDetailModal">
       <ion-header>
         <ion-toolbar color="primary">
-          <ion-title>Détails</ion-title>
-          <ion-buttons slot="end">
+          <ion-buttons slot="start">
             <ion-button @click="closeDetailModal">
-              <ion-icon :icon="closeOutline"></ion-icon>
+              <ion-icon :icon="arrowBackOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
+          <ion-title>Détails</ion-title>
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding" v-if="selectedSignalement">
-        <ion-card>
-          <ion-card-header>
-            <ion-chip :color="getStatutColor(selectedSignalement.statut)">
-              {{ getStatutLabel(selectedSignalement.statut) }}
-            </ion-chip>
-            <ion-card-title>{{ selectedSignalement.titre }}</ion-card-title>
-            <ion-card-subtitle>
-              {{ getTypeLabel(selectedSignalement.typeProbleme) }}
-            </ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <p v-if="selectedSignalement.description">
-              {{ selectedSignalement.description }}
-            </p>
-            <ion-list>
-              <ion-item lines="none">
-                <ion-icon :icon="locationOutline" slot="start"></ion-icon>
-                <ion-label>
-                  <p>{{ selectedSignalement.adresse || 'Adresse non renseignée' }}</p>
-                </ion-label>
-              </ion-item>
-              <ion-item lines="none">
-                <ion-icon :icon="calendarOutline" slot="start"></ion-icon>
-                <ion-label>
-                  <p>{{ formatDate(selectedSignalement.dateSignalement) }}</p>
-                </ion-label>
-              </ion-item>
-              <ion-item lines="none">
-                <ion-icon :icon="personOutline" slot="start"></ion-icon>
-                <ion-label>
-                  <p>{{ selectedSignalement.createdByName || selectedSignalement.createdByEmail }}</p>
-                </ion-label>
-              </ion-item>
-              <ion-item lines="none">
-                <ion-icon :icon="flagOutline" slot="start"></ion-icon>
-                <ion-label>
-                  <p>Priorité: {{ getPrioriteLabel(selectedSignalement.priorite) }}</p>
-                </ion-label>
-              </ion-item>
-            </ion-list>
-          </ion-card-content>
-        </ion-card>
+        <!-- Statut -->
+        <ion-chip :color="getStatutChipColor(selectedSignalement.statut?.statut)">
+          {{ selectedSignalement.statut?.statut || 'Inconnu' }}
+          ({{ selectedSignalement.statut?.avancement || 0 }}%)
+        </ion-chip>
+
+        <!-- Titre -->
+        <h1 class="detail-title">{{ selectedSignalement.titre }}</h1>
+
+        <!-- Description -->
+        <p v-if="selectedSignalement.description">{{ selectedSignalement.description }}</p>
+
+        <!-- Informations -->
+        <ion-list>
+          <ion-item lines="none">
+            <ion-icon :icon="locationOutline" slot="start" color="primary"></ion-icon>
+            <ion-label>
+              <p>{{ selectedSignalement.latitude.toFixed(6) }}, {{ selectedSignalement.longitude.toFixed(6) }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item lines="none">
+            <ion-icon :icon="calendarOutline" slot="start" color="primary"></ion-icon>
+            <ion-label>
+              <p>{{ formatDate(selectedSignalement.created_at) }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item lines="none" v-if="selectedSignalement.surface_m2">
+            <ion-label>
+              <p>Surface: {{ selectedSignalement.surface_m2 }} m²</p>
+            </ion-label>
+          </ion-item>
+          <ion-item lines="none" v-if="selectedSignalement.budget">
+            <ion-label>
+              <p>Budget: {{ selectedSignalement.budget }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
       </ion-content>
     </ion-modal>
 
@@ -190,28 +211,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-  onIonViewDidEnter,
-  IonButton, IonIcon, IonFab, IonFabButton, IonModal, IonItem, IonLabel,
-  IonInput, IonTextarea, IonSelect, IonSelectOption, IonCard, IonCardHeader,
-  IonCardTitle, IonCardSubtitle, IonCardContent, IonChip, IonList,
-  IonSpinner, IonToast, IonLoading, IonMenuButton
+  IonButton, IonIcon, IonCard, IonCardContent, IonModal, IonLoading,
+  IonMenuButton, IonItem, IonLabel, IonInput, IonTextarea, IonChip,
+  IonSpinner, IonToast, IonList, IonCardHeader
 } from '@ionic/vue'
 import {
-  addOutline, closeOutline, refreshOutline, locationOutline,
-  calendarOutline, personOutline, flagOutline
+  refreshOutline, addOutline, closeOutline, locationOutline,
+  calendarOutline, arrowBackOutline
 } from 'ionicons/icons'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSignalementStore } from '@/stores/signalementStore'
-import {
-  typeProblemeLabels, statutLabels, prioriteLabels, statutColors,
-  type Signalement, type TypeProbleme, type SignalementStatus, type Priorite
-} from '@/services/firestoreSignalementService'
+import { useAuthStore } from '@/stores/authStore'
+import { statutColors } from '@/types/firestore.types'
+import type { Signalement } from '@/types/firestore.types'
+import firestoreSignalementService from '@/services/firestoreSignalementService'
 
 const signalementStore = useSignalementStore()
+const authStore = useAuthStore()
 
 // Map
 const mapContainer = ref<HTMLElement | null>(null)
@@ -219,52 +239,71 @@ let map: L.Map | null = null
 let markersLayer: L.LayerGroup | null = null
 let tempMarker: L.Marker | null = null
 
-// Antananarivo coordinates
+// Antananarivo center
 const ANTANANARIVO_CENTER: [number, number] = [-18.9137, 47.5226]
 const DEFAULT_ZOOM = 13
 
 // State
+const filter = ref<'tous' | 'mes'>('tous')
 const isLoading = ref(false)
+const isAddingMode = ref(false)
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
 const selectedSignalement = ref<Signalement | null>(null)
-const isAddingMode = ref(false)
+const selectedMapPoint = ref<{ lat: number; lng: number } | null>(null)
+
+// Form
+const newSignalement = ref({
+  titre: '',
+  description: ''
+})
 
 // Toast
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastColor = ref('success')
 
-// Form
-const newSignalement = ref({
-  titre: '',
-  description: '',
-  typeProbleme: '' as TypeProbleme | '',
-  latitude: 0,
-  longitude: 0,
-  adresse: '',
-  priorite: 'NORMALE' as Priorite
+// Computed
+const recap = computed(() => signalementStore.recap)
+
+const displayedSignalements = computed(() => {
+  if (filter.value === 'mes') {
+    return signalementStore.mesSignalements
+  }
+  return signalementStore.signalements
 })
 
 const isFormValid = computed(() => {
-  return newSignalement.value.titre.trim() !== '' && 
-         newSignalement.value.typeProbleme !== ''
+  return newSignalement.value.titre.trim() !== '' && selectedMapPoint.value
 })
 
 // Helpers
-const getTypeLabel = (type: TypeProbleme) => typeProblemeLabels[type] || type
-const getStatutLabel = (statut: SignalementStatus) => statutLabels[statut] || statut
-const getPrioriteLabel = (priorite: Priorite) => prioriteLabels[priorite] || priorite
-const getStatutColor = (statut: SignalementStatus) => statutColors[statut] || 'medium'
+const getStatutChipColor = (statut: string | undefined): string => {
+  const colors: Record<string, string> = {
+    'NOUVEAU': 'primary',
+    'EN_COURS': 'warning',
+    'TERMINE': 'success',
+    'ANNULE': 'danger'
+  }
+  return colors[statut || 'NOUVEAU'] || 'medium'
+}
+
+const getMarkerColor = (statut: string): string => {
+  const colors: Record<string, string> = {
+    'NOUVEAU': '#3880ff',
+    'EN_COURS': '#ffc409',
+    'TERMINE': '#2dd36f',
+    'ANNULE': '#eb445a'
+  }
+  return colors[statut] || '#92949c'
+}
 
 const formatDate = (date: Date | string) => {
   const d = date instanceof Date ? date : new Date(date)
   return d.toLocaleDateString('fr-FR', {
     day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    month: 'short',
+    year: 'numeric'
   })
 }
 
@@ -272,68 +311,44 @@ const formatDate = (date: Date | string) => {
 const initMap = () => {
   if (!mapContainer.value) return
 
-  // Limites de Madagascar (bounds)
-  const madagascarBounds = L.latLngBounds(
-    L.latLng(-25.6, 43.2),  // Sud-Ouest
-    L.latLng(-11.9, 50.5)   // Nord-Est
-  )
+  map = L.map(mapContainer.value).setView(ANTANANARIVO_CENTER, DEFAULT_ZOOM)
 
-  // Limites d'Antananarivo et environs (pour zoom max)
-  const antananarivooBounds = L.latLngBounds(
-    L.latLng(-19.05, 47.4),  // Sud-Ouest
-    L.latLng(-18.75, 47.65)  // Nord-Est
-  )
-
-  map = L.map(mapContainer.value, {
-    center: ANTANANARIVO_CENTER,
-    zoom: DEFAULT_ZOOM,
-    minZoom: 6,           // Zoom minimum pour voir tout Madagascar
-    maxZoom: 18,          // Zoom maximum
-    maxBounds: madagascarBounds,        // Limiter le déplacement à Madagascar
-    maxBoundsViscosity: 1.0             // Empêcher complètement de sortir des limites
-  })
-
-  // Tile layer OpenStreetMap
+  // OSM tiles
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
   }).addTo(map)
 
-  // Layer pour les markers
+  // Markers layer
   markersLayer = L.layerGroup().addTo(map)
 
-  // Click event pour ajouter un signalement
+  // Click handler for adding marker
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (isAddingMode.value) {
-      handleMapClick(e)
+      const { lat, lng } = e.latlng
+      
+      // Remove old temp marker
+      if (tempMarker) {
+        tempMarker.removeFrom(map!)
+      }
+
+      // Add temp marker
+      tempMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: 'custom-marker temp-marker',
+          html: '<div style="background: #10dc60; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(map!)
+
+      selectedMapPoint.value = { lat, lng }
+      showCreateModal.value = true
+      isAddingMode.value = false
     }
   })
-}
 
-const handleMapClick = (e: L.LeafletMouseEvent) => {
-  const { lat, lng } = e.latlng
-
-  // Supprimer le marqueur temporaire s'il existe
-  if (tempMarker) {
-    tempMarker.remove()
-  }
-
-  // Ajouter un nouveau marqueur temporaire
-  tempMarker = L.marker([lat, lng], {
-    icon: L.divIcon({
-      className: 'custom-marker temp-marker',
-      html: '<div style="background: #10dc60; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
-    })
-  }).addTo(map!)
-
-  // Mettre à jour les coordonnées
-  newSignalement.value.latitude = lat
-  newSignalement.value.longitude = lng
-
-  // Ouvrir le modal
-  showCreateModal.value = true
-  isAddingMode.value = false
+  loadMarkers()
 }
 
 const loadMarkers = () => {
@@ -341,8 +356,8 @@ const loadMarkers = () => {
 
   markersLayer.clearLayers()
 
-  signalementStore.signalements.forEach((sig, index) => {
-    const color = getMarkerColor(sig.statut)
+  displayedSignalements.value.forEach((sig, index) => {
+    const color = getMarkerColor(sig.statut?.statut || 'NOUVEAU')
     
     const marker = L.marker([sig.latitude, sig.longitude], {
       icon: L.divIcon({
@@ -360,22 +375,21 @@ const loadMarkers = () => {
       showDetailModal.value = true
     })
 
-    marker.bindTooltip(sig.titre, { direction: 'top', offset: [0, -10] })
     markersLayer!.addLayer(marker)
   })
 }
 
-const getMarkerColor = (statut: SignalementStatus): string => {
-  const colors: Record<SignalementStatus, string> = {
-    NOUVEAU: '#3880ff',
-    EN_COURS: '#ffc409',
-    RESOLU: '#2dd36f',
-    REJETE: '#eb445a'
+// Actions
+const refreshSignalements = async () => {
+  if (filter.value === 'mes') {
+    await signalementStore.fetchMesSignalements()
+  } else {
+    await signalementStore.fetchAll()
   }
-  return colors[statut] || '#92949c'
+  await signalementStore.fetchRecap()
+  loadMarkers()
 }
 
-// Actions
 const startAddSignalement = () => {
   isAddingMode.value = true
   toastMessage.value = 'Cliquez sur la carte pour placer le signalement'
@@ -383,20 +397,48 @@ const startAddSignalement = () => {
   showToast.value = true
 }
 
-const refreshSignalements = async () => {
-  isLoading.value = true
-  await signalementStore.fetchAll()
-  loadMarkers()
-  isLoading.value = false
-}
-
 const closeCreateModal = () => {
   showCreateModal.value = false
-  if (tempMarker) {
-    tempMarker.remove()
-    tempMarker = null
-  }
   resetForm()
+  if (tempMarker && map) {
+    tempMarker.removeFrom(map)
+  }
+  tempMarker = null
+  isAddingMode.value = false
+}
+
+const resetForm = () => {
+  newSignalement.value = {
+    titre: '',
+    description: ''
+  }
+  selectedMapPoint.value = null
+}
+
+const submitSignalement = async () => {
+  if (!isFormValid.value) return
+
+  isLoading.value = true
+  try {
+    await signalementStore.create({
+      titre: newSignalement.value.titre,
+      description: newSignalement.value.description || undefined,
+      latitude: selectedMapPoint.value!.lat,
+      longitude: selectedMapPoint.value!.lng
+    })
+
+    toastMessage.value = 'Signalement créé avec succès !'
+    toastColor.value = 'success'
+    showToast.value = true
+    closeCreateModal()
+    await refreshSignalements()
+  } catch (error: any) {
+    toastMessage.value = error.message || 'Erreur lors de la création'
+    toastColor.value = 'danger'
+    showToast.value = true
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const closeDetailModal = () => {
@@ -404,69 +446,19 @@ const closeDetailModal = () => {
   selectedSignalement.value = null
 }
 
-const resetForm = () => {
-  newSignalement.value = {
-    titre: '',
-    description: '',
-    typeProbleme: '',
-    latitude: 0,
-    longitude: 0,
-    adresse: '',
-    priorite: 'NORMALE'
-  }
-}
-
-const submitSignalement = async () => {
-  if (!isFormValid.value) return
-
-  const result = await signalementStore.create({
-    titre: newSignalement.value.titre,
-    description: newSignalement.value.description || undefined,
-    typeProbleme: newSignalement.value.typeProbleme as TypeProbleme,
-    latitude: newSignalement.value.latitude,
-    longitude: newSignalement.value.longitude,
-    adresse: newSignalement.value.adresse || undefined,
-    priorite: newSignalement.value.priorite
-  })
-
-  if (result.success) {
-    toastMessage.value = 'Signalement créé avec succès !'
-    toastColor.value = 'success'
-    showToast.value = true
-    closeCreateModal()
-    loadMarkers()
-  } else {
-    toastMessage.value = result.message || 'Erreur lors de la création'
-    toastColor.value = 'danger'
-    showToast.value = true
-  }
-}
-
 // Lifecycle
 onMounted(async () => {
-  // Attendre que le DOM soit prêt
-  await nextTick()
+  isLoading.value = true
+  try {
+    await refreshSignalements()
+  } finally {
+    isLoading.value = false
+  }
   
-  // Petit délai pour s'assurer que le conteneur est rendu
+  // Initialize map after a small delay to ensure container is mounted
   setTimeout(() => {
     initMap()
-    // Forcer le redimensionnement de la carte
-    if (map) {
-      map.invalidateSize()
-    }
   }, 100)
-  
-  await refreshSignalements()
-})
-
-// Quand la vue devient visible (important pour Ionic)
-onIonViewDidEnter(() => {
-  if (map) {
-    // Forcer le rafraîchissement de la carte quand on revient sur la page
-    setTimeout(() => {
-      map!.invalidateSize()
-    }, 100)
-  }
 })
 
 onUnmounted(() => {
@@ -475,35 +467,113 @@ onUnmounted(() => {
   }
 })
 
-// Watch for changes
-watch(() => signalementStore.signalements, () => {
-  loadMarkers()
-}, { deep: true })
+// Watch filter changes
+import { watch } from 'vue'
+watch(() => filter.value, () => {
+  refreshSignalements()
+})
 </script>
 
 <style scoped>
-#map {
+.recap-card {
+  margin: 16px;
+}
+
+.recap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.recap-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.recap-number {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.recap-label {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+}
+
+.recap-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ion-color-light);
+  text-align: center;
+}
+
+.recap-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+  margin-top: 4px;
+}
+
+.text-primary { color: var(--ion-color-primary); }
+.text-warning { color: var(--ion-color-warning); }
+.text-success { color: var(--ion-color-success); }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  height: 100%;
 }
 
-ion-modal ion-content {
-  --background: var(--ion-background-color);
+.btn-group {
+  display: flex;
+  gap: 0;
 }
 
-.custom-marker {
-  background: transparent;
-  border: none;
+.btn-group ion-button:first-child {
+  border-radius: 4px 0 0 4px;
 }
 
-.temp-marker {
-  z-index: 1000 !important;
+.btn-group ion-button:last-child {
+  border-radius: 0 4px 4px 0;
 }
-</style>
 
-<style>
-/* Global styles for Leaflet */
-.leaflet-container {
-  font-family: inherit;
+.map-container {
+  width: 100%;
+  height: 400px;
+  z-index: 1;
+}
+
+.detail-title {
+  font-size: 24px;
+  margin: 0 0 16px;
+  font-weight: bold;
+}
+
+ion-card {
+  margin: 16px 0;
 }
 </style>

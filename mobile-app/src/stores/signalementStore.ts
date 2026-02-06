@@ -21,14 +21,15 @@ export const useSignalementStore = defineStore('signalement', () => {
 
   const signalementsByStatut = computed(() => {
     const grouped: Record<string, Signalement[]> = {
-      NOUVEAU: [],
-      EN_COURS: [],
-      RESOLU: [],
-      REJETE: []
+      'NOUVEAU': [],
+      'EN_COURS': [],
+      'TERMINE': [],
+      'ANNULE': []
     }
     signalements.value.forEach(s => {
-      if (grouped[s.statut]) {
-        grouped[s.statut].push(s)
+      const status = s.statut?.statut || 'NOUVEAU'
+      if (grouped[status]) {
+        grouped[status].push(s)
       }
     })
     return grouped
