@@ -29,6 +29,7 @@
       <!-- Récapitulatif -->
       <ion-card v-if="recap" class="recap-card">
         <ion-card-content>
+          <!-- Compteurs de statuts -->
           <div class="recap-grid">
             <div class="recap-item">
               <span class="recap-number">{{ recap.total }}</span>
@@ -43,8 +44,24 @@
               <span class="recap-label">En cours</span>
             </div>
             <div class="recap-item">
-              <span class="recap-number text-success">{{ recap.resolus }}</span>
-              <span class="recap-label">Résolus</span>
+              <span class="recap-number text-success">{{ recap.termines }}</span>
+              <span class="recap-label">Terminés</span>
+            </div>
+          </div>
+          
+          <!-- Statistiques détaillées -->
+          <div class="recap-stats-row">
+            <div class="recap-stat">
+              <span class="stat-label">Surface totale</span>
+              <span class="stat-value">{{ (recap.totalSurfaceM2 || 0).toFixed(1) }} m²</span>
+            </div>
+            <div class="recap-stat">
+              <span class="stat-label">Budget total</span>
+              <span class="stat-value">{{ ((recap.totalBudget || 0) / 1000000).toFixed(1) }}M Ar</span>
+            </div>
+            <div class="recap-stat">
+              <span class="stat-label">Avancement moyen</span>
+              <span class="stat-value">{{ recap.averageAvancement || 0 }}%</span>
             </div>
           </div>
         </ion-card-content>
@@ -54,16 +71,16 @@
       <ion-list v-if="displayedSignalements.length > 0">
         <ion-item-sliding v-for="sig in displayedSignalements" :key="sig.id">
           <ion-item button @click="viewDetails(sig)">
-            <ion-avatar slot="start" :style="{ background: getStatutColor(sig.statut) }">
-              <ion-icon :icon="getTypeIcon(sig.typeProbleme)" color="light"></ion-icon>
+            <ion-avatar slot="start" :style="{ background: getStatutColor(sig.statut_id) }">
+              <span style="color: white; font-weight: bold; font-size: 18px">📍</span>
             </ion-avatar>
             <ion-label>
               <h2>{{ sig.titre }}</h2>
-              <p>{{ getTypeLabel(sig.typeProbleme) }} - {{ sig.adresse || 'Sans adresse' }}</p>
-              <p class="date-text">{{ formatDate(sig.dateSignalement) }}</p>
+              <p>{{ sig.latitude.toFixed(4) }}, {{ sig.longitude.toFixed(4) }}</p>
+              <p class="date-text">{{ formatDate(sig.created_at) }}</p>
             </ion-label>
-            <ion-chip slot="end" :color="getStatutChipColor(sig.statut)" size="small">
-              {{ getStatutLabel(sig.statut) }}
+            <ion-chip slot="end" :color="getStatutChipColor(sig.statut?.statut)" size="small">
+              {{ sig.statut?.statut || 'Inconnu' }}
             </ion-chip>
           </ion-item>
 
@@ -113,24 +130,16 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding" v-if="selectedSignalement">
-        <!-- Statut et priorité -->
+        <!-- Statut -->
         <div class="status-badges">
-          <ion-chip :color="getStatutChipColor(selectedSignalement.statut)">
-            {{ getStatutLabel(selectedSignalement.statut) }}
-          </ion-chip>
-          <ion-chip :color="getPrioriteColor(selectedSignalement.priorite)">
-            {{ getPrioriteLabel(selectedSignalement.priorite) }}
+          <ion-chip :color="getStatutChipColor(selectedSignalement.statut?.statut)">
+            {{ selectedSignalement.statut?.statut || 'Inconnu' }}
+            ({{ selectedSignalement.statut?.avancement || 0 }}%)
           </ion-chip>
         </div>
 
         <!-- Titre -->
         <h1 class="detail-title">{{ selectedSignalement.titre }}</h1>
-
-        <!-- Type -->
-        <ion-chip color="medium">
-          <ion-icon :icon="getTypeIcon(selectedSignalement.typeProbleme)"></ion-icon>
-          <ion-label>{{ getTypeLabel(selectedSignalement.typeProbleme) }}</ion-label>
-        </ion-chip>
 
         <!-- Description -->
         <ion-card v-if="selectedSignalement.description">
@@ -147,14 +156,6 @@
           <ion-item>
             <ion-icon :icon="locationOutline" slot="start" color="primary"></ion-icon>
             <ion-label>
-              <h3>Adresse</h3>
-              <p>{{ selectedSignalement.adresse || 'Non renseignée' }}</p>
-            </ion-label>
-          </ion-item>
-
-          <ion-item>
-            <ion-icon :icon="navigateOutline" slot="start" color="primary"></ion-icon>
-            <ion-label>
               <h3>Coordonnées</h3>
               <p>{{ selectedSignalement.latitude.toFixed(6) }}, {{ selectedSignalement.longitude.toFixed(6) }}</p>
             </ion-label>
@@ -163,27 +164,32 @@
             </ion-button>
           </ion-item>
 
+          <ion-item v-if="selectedSignalement.surface_m2">
+            <ion-label>
+              <h3>Surface</h3>
+              <p>{{ selectedSignalement.surface_m2 }} m²</p>
+            </ion-label>
+          </ion-item>
+
+          <ion-item v-if="selectedSignalement.budget">
+            <ion-label>
+              <h3>Budget</h3>
+              <p>{{ selectedSignalement.budget }}</p>
+            </ion-label>
+          </ion-item>
+
+          <ion-item v-if="selectedSignalement.entreprise_concernee">
+            <ion-label>
+              <h3>Entreprise</h3>
+              <p>{{ selectedSignalement.entreprise_concernee }}</p>
+            </ion-label>
+          </ion-item>
+
           <ion-item>
             <ion-icon :icon="calendarOutline" slot="start" color="primary"></ion-icon>
             <ion-label>
               <h3>Date du signalement</h3>
-              <p>{{ formatDateLong(selectedSignalement.dateSignalement) }}</p>
-            </ion-label>
-          </ion-item>
-
-          <ion-item>
-            <ion-icon :icon="personOutline" slot="start" color="primary"></ion-icon>
-            <ion-label>
-              <h3>Signalé par</h3>
-              <p>{{ selectedSignalement.createdByName || selectedSignalement.createdByEmail }}</p>
-            </ion-label>
-          </ion-item>
-
-          <ion-item v-if="selectedSignalement.dateResolution">
-            <ion-icon :icon="checkmarkCircleOutline" slot="start" color="success"></ion-icon>
-            <ion-label>
-              <h3>Date de résolution</h3>
-              <p>{{ formatDateLong(selectedSignalement.dateResolution) }}</p>
+              <p>{{ formatDateLong(selectedSignalement.created_at) }}</p>
             </ion-label>
           </ion-item>
         </ion-list>
@@ -232,16 +238,12 @@ import {
 import {
   refreshOutline, trashOutline, documentTextOutline, mapOutline,
   arrowBackOutline, locationOutline, navigateOutline, calendarOutline,
-  personOutline, checkmarkCircleOutline, openOutline, alertCircleOutline,
-  warningOutline, waterOutline, constructOutline, bulbOutline, 
-  helpCircleOutline
+  personOutline, checkmarkCircleOutline, openOutline, alertCircleOutline
 } from 'ionicons/icons'
 import { useSignalementStore } from '@/stores/signalementStore'
 import { useAuthStore } from '@/stores/authStore'
-import {
-  typeProblemeLabels, statutLabels, prioriteLabels,
-  type Signalement, type TypeProbleme, type SignalementStatus, type Priorite
-} from '@/services/firestoreSignalementService'
+import { statutLabels, statutColors } from '@/types/firestore.types'
+import type { Signalement } from '@/types/firestore.types'
 
 const router = useRouter()
 const signalementStore = useSignalementStore()
@@ -283,51 +285,24 @@ const alertButtons = [
 ]
 
 // Helpers
-const getTypeLabel = (type: TypeProbleme) => typeProblemeLabels[type] || type
-const getStatutLabel = (statut: SignalementStatus) => statutLabels[statut] || statut
-const getPrioriteLabel = (priorite: Priorite) => prioriteLabels[priorite] || priorite
-
-const getStatutColor = (statut: SignalementStatus): string => {
-  const colors: Record<SignalementStatus, string> = {
-    NOUVEAU: '#3880ff',
-    EN_COURS: '#ffc409',
-    RESOLU: '#2dd36f',
-    REJETE: '#eb445a'
+const getStatutColor = (statutId: string): string => {
+  const colors: Record<string, string> = {
+    'NOUVEAU': '#3880ff',
+    'EN_COURS': '#ffc409',
+    'TERMINE': '#2dd36f',
+    'ANNULE': '#eb445a'
   }
-  return colors[statut] || '#92949c'
+  return colors[statutId] || '#92949c'
 }
 
-const getStatutChipColor = (statut: SignalementStatus): string => {
-  const colors: Record<SignalementStatus, string> = {
-    NOUVEAU: 'primary',
-    EN_COURS: 'warning',
-    RESOLU: 'success',
-    REJETE: 'danger'
+const getStatutChipColor = (statut: string | undefined): string => {
+  const colors: Record<string, string> = {
+    'NOUVEAU': 'primary',
+    'EN_COURS': 'warning',
+    'TERMINE': 'success',
+    'ANNULE': 'danger'
   }
-  return colors[statut] || 'medium'
-}
-
-const getPrioriteColor = (priorite: Priorite): string => {
-  const colors: Record<Priorite, string> = {
-    BASSE: 'medium',
-    NORMALE: 'primary',
-    HAUTE: 'warning',
-    URGENTE: 'danger'
-  }
-  return colors[priorite] || 'medium'
-}
-
-const getTypeIcon = (type: TypeProbleme): string => {
-  const icons: Record<TypeProbleme, string> = {
-    NID_DE_POULE: alertCircleOutline,
-    FISSURE: warningOutline,
-    INONDATION: waterOutline,
-    OBSTACLE: constructOutline,
-    ECLAIRAGE: bulbOutline,
-    SIGNALISATION: documentTextOutline,
-    AUTRE: helpCircleOutline
-  }
-  return icons[type] || helpCircleOutline
+  return colors[statut || 'NOUVEAU'] || 'medium'
 }
 
 const formatDate = (date: Date | string) => {
@@ -352,7 +327,7 @@ const formatDateLong = (date: Date | string | undefined) => {
 }
 
 const canDelete = (sig: Signalement): boolean => {
-  return sig.createdById === authStore.userId
+  return sig.user_id === authStore.currentUser?.id
 }
 
 // Actions
@@ -448,6 +423,34 @@ onMounted(async () => {
 .recap-label {
   font-size: 11px;
   color: var(--ion-color-medium);
+}
+
+.recap-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ion-color-light);
+  text-align: center;
+}
+
+.recap-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+  margin-top: 4px;
 }
 
 .text-primary { color: var(--ion-color-primary); }

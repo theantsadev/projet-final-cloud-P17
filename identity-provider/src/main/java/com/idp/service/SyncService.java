@@ -25,6 +25,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +54,12 @@ public class SyncService {
     // Formateur de dates
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
+    // Cache du statut de connexion (évite les appels répétés lents)
+    private static final long CACHE_DURATION_MS = 5_000; // 5 secondes (réduit pour réagir plus vite au changement de connexion)
+    private static final int CONNECTION_TIMEOUT_SECONDS = 10; // 10 secondes max pour vérifier (augmenté)
+    private final AtomicBoolean cachedOnlineStatus = new AtomicBoolean(false);
+    private final AtomicLong lastOnlineCheck = new AtomicLong(0);
+
     /**
      * Initialiser les listeners Firestore
      */
@@ -57,7 +67,7 @@ public class SyncService {
     public void initFirestoreListeners() {
         log.info("🚀 Initialisation des listeners Firestore...");
         if (isOnline()) {
-            startFirestoreListeners();
+            // startFirestoreListeners();
         }
     }
 
@@ -367,15 +377,60 @@ public class SyncService {
     }
 
     /**
-     * Vérifie la connexion à Firestore
+     * Vérifie la connexion à Firestore avec cache et timeout
+     * Évite les appels répétés lents quand il n'y a pas de connexion
      */
     public boolean isOnline() {
+        long now = System.currentTimeMillis();
+        long lastCheck = lastOnlineCheck.get();
+
+        // Utiliser le cache si la dernière vérification est récente
+        if (now - lastCheck < CACHE_DURATION_MS) {
+            return cachedOnlineStatus.get();
+        }
+
+        // Vérifier la connexion avec timeout
+        boolean online = checkFirebaseConnectionWithTimeout();
+
+        // Mettre à jour le cache
+        cachedOnlineStatus.set(online);
+        lastOnlineCheck.set(now);
+
+        return online;
+    }
+
+    /**
+     * Vérifie la connexion Firebase avec un timeout court
+     */
+    private boolean checkFirebaseConnectionWithTimeout() {
         try {
-            firestore.listCollections();
+            log.debug("🔍 Vérification connexion Firebase (timeout: {} sec)...", CONNECTION_TIMEOUT_SECONDS);
+            // Utiliser un Future avec timeout pour éviter les blocages longs
+            ApiFuture<QuerySnapshot> future = firestore.collection(FIRESTORE_USERS_COLLECTION).limit(1).get();
+            QuerySnapshot result = future.get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            log.info("✅ Firebase ONLINE - {} documents dans collection users", result.size());
             return true;
+        } catch (TimeoutException e) {
+            log.warn("⏱️ Timeout lors de la vérification Firebase ({} secondes) - Firebase probablement inaccessible", CONNECTION_TIMEOUT_SECONDS);
+            return false;
+        } catch (ExecutionException e) {
+            log.warn("❌ Firebase ExecutionException: {}", e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            return false;
+        } catch (InterruptedException e) {
+            log.warn("❌ Firebase InterruptedException: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+            return false;
         } catch (Exception e) {
+            log.warn("❌ Firebase offline - Exception: {} - {}", e.getClass().getSimpleName(), e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Force une nouvelle vérification de la connexion (invalide le cache)
+     */
+    public void invalidateOnlineCache() {
+        lastOnlineCheck.set(0);
     }
 
     /**
@@ -385,7 +440,13 @@ public class SyncService {
     public void syncUserToFirestore(User user) {
         log.info("📤 Sync PostgreSQL→Firestore - User: {}", user.getEmail());
 
-        if (!isOnline()) {
+        boolean online = isOnline();
+        log.info("   🌐 isOnline() = {} (cache: lastCheck={}ms ago)", 
+            online, 
+            System.currentTimeMillis() - lastOnlineCheck.get());
+        
+        if (!online) {
+            log.warn("   ❌ Firebase offline - User {} reste PENDING", user.getEmail());
             user.setSyncStatus("PENDING");
             userRepository.save(user);
             return;
@@ -505,7 +566,7 @@ public class SyncService {
      * DÉBLOQUER un utilisateur depuis le web (manager)
      */
     @Transactional
-    public void unlockUserFromWeb(String email) {
+    public User unlockUserFromWeb(String email) {
         try {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + email));
@@ -524,6 +585,7 @@ public class SyncService {
             syncUserToFirestore(user);
 
             log.info("✅ Utilisateur {} débloqué et sync vers Firestore", email);
+            return user;
 
         } catch (Exception e) {
             log.error("❌ Erreur déblocage utilisateur: {}", e.getMessage());
@@ -679,28 +741,29 @@ public class SyncService {
     /**
      * Méthode de synchro automatique programmée (PostgreSQL → Firestore)
      */
-    @Scheduled(fixedDelay = 30000) // Toutes les 30 secondes
-    @Transactional
-    public void syncAllPendingItems() {
-        if (!isOnline()) {
-            log.info("⏸️  Sync automatique annulé - Firestore hors ligne");
-            return;
-        }
+    // @Scheduled(fixedDelay = 30000) // Toutes les 30 secondes
+    // @Transactional
+    // public void syncAllPendingItems() {
+    // if (!isOnline()) {
+    // log.info("⏸️ Sync automatique annulé - Firestore hors ligne");
+    // return;
+    // }
 
-        log.info("🔄 Début synchro automatique (PostgreSQL → Firestore)...");
+    // log.info("🔄 Début synchro automatique (PostgreSQL → Firestore)...");
 
-        // 1. Synchroniser les utilisateurs en attente
-        List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
-        log.info("📋 {} utilisateurs en attente", pendingUsers.size());
+    // // 1. Synchroniser les utilisateurs en attente
+    // List<User> pendingUsers = userRepository.findBySyncStatus("PENDING");
+    // log.info("📋 {} utilisateurs en attente", pendingUsers.size());
 
-        for (User user : pendingUsers) {
-            try {
-                syncUserToFirestore(user);
-            } catch (Exception e) {
-                log.error("❌ Erreur sync auto utilisateur {}: {}", user.getEmail(), e.getMessage());
-            }
-        }
+    // for (User user : pendingUsers) {
+    // try {
+    // syncUserToFirestore(user);
+    // } catch (Exception e) {
+    // log.error("❌ Erreur sync auto utilisateur {}: {}", user.getEmail(),
+    // e.getMessage());
+    // }
+    // }
 
-        log.info("✅ Synchro automatique terminée");
-    }
+    // log.info("✅ Synchro automatique terminée");
+    // }
 }

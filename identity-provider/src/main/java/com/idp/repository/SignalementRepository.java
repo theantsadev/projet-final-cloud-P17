@@ -1,7 +1,7 @@
 package com.idp.repository;
 
 import com.idp.entity.Signalement;
-import com.idp.entity.StatutSignalement;
+import com.idp.entity.StatutAvancementSignalement;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,7 +15,7 @@ public interface SignalementRepository extends JpaRepository<Signalement, String
     
     List<Signalement> findBySignaleurId(String signaleurId);
     
-    List<Signalement> findByStatut(StatutSignalement statut);
+    List<Signalement> findByStatut(StatutAvancementSignalement statut);
     
     List<Signalement> findByIsSynchronizedFalse();
     

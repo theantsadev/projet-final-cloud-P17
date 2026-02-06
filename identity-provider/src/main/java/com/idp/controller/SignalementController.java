@@ -5,6 +5,7 @@ import com.idp.dto.SignalementRequest;
 import com.idp.dto.SignalementResponse;
 import com.idp.dto.SignalementStatisticsResponse;
 import com.idp.service.SignalementService;
+import com.idp.service.SyncService;
 import com.idp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,25 +24,26 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class SignalementController {
-    
+
     private final SignalementService signalementService;
+    private final SyncService syncService;
     private final UserRepository userRepository;
-    
+
     /**
      * TEST ENDPOINT - Créer un signalement de test AVEC user_id personnalisé
      */
     @PostMapping("/test/create-with-user")
     public ResponseEntity<ApiResponse<?>> createTestSignalementWithUser(
             @RequestBody Map<String, Object> payload) {
-        
+
         log.info("Création d'un signalement de test avec user spécifique");
-        
+
         String userId = (String) payload.getOrDefault("userId", null);
         if (userId == null) {
             var existingUser = userRepository.findAll().stream().findFirst();
             userId = existingUser.isPresent() ? existingUser.get().getId() : "99e64180-78fc-43f4-afa5-9677b56ba88a";
         }
-        
+
         SignalementRequest request = SignalementRequest.builder()
                 .titre((String) payload.getOrDefault("titre", "Nid-de-poule rue Zafimaniry - TEST"))
                 .description((String) payload.getOrDefault("description", "Signalement de test automatique"))
@@ -52,24 +54,24 @@ public class SignalementController {
                 .entrepriseConcernee((String) payload.getOrDefault("entrepriseConcernee", "Test Constructo"))
                 .pourcentageAvancement(Integer.parseInt(payload.getOrDefault("pourcentageAvancement", "0").toString()))
                 .build();
-        
+
         SignalementResponse response = signalementService.createSignalement(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Signalement de test créé avec userId: " + userId));
     }
-    
+
     /**
      * TEST ENDPOINT - Créer un signalement de test sans authentification
      */
     @PostMapping("/test/create")
     public ResponseEntity<ApiResponse<?>> createTestSignalement() {
-        
+
         log.info("Création d'un signalement de test");
-        
+
         // Récupérer un user existant (le premier utilisateur)
         var existingUser = userRepository.findAll().stream().findFirst();
         String userId = existingUser.isPresent() ? existingUser.get().getId() : "99e64180-78fc-43f4-afa5-9677b56ba88a";
-        
+
         SignalementRequest request = SignalementRequest.builder()
                 .titre("Nid-de-poule rue Zafimaniry - TEST")
                 .description("Signalement de test automatique")
@@ -80,12 +82,12 @@ public class SignalementController {
                 .entrepriseConcernee("Test Constructo")
                 .pourcentageAvancement(0)
                 .build();
-        
+
         SignalementResponse response = signalementService.createSignalement(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Signalement de test créé"));
     }
-    
+
     /**
      * Créer un nouveau signalement
      */
@@ -94,14 +96,14 @@ public class SignalementController {
     public ResponseEntity<ApiResponse<?>> createSignalement(
             @Valid @RequestBody SignalementRequest request,
             Principal principal) {
-        
+
         log.info("Création d'un nouveau signalement par l'utilisateur: {}", principal.getName());
         SignalementResponse response = signalementService.createSignalement(request, principal.getName());
-        
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Signalement créé avec succès"));
     }
-    
+
     /**
      * Récupérer tous les signalements
      */
@@ -109,23 +111,23 @@ public class SignalementController {
     public ResponseEntity<ApiResponse<?>> getAllSignalements() {
         log.info("Récupération de tous les signalements");
         List<SignalementResponse> signalements = signalementService.getAllSignalements();
-        
+
         return ResponseEntity.ok(ApiResponse.success(signalements, "Signalements récupérés avec succès"));
     }
-    
+
     /**
      * Récupérer un signalement par ID
      */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> getSignalementById(
             @PathVariable String id) {
-        
+
         log.info("Récupération du signalement: {}", id);
         SignalementResponse signalement = signalementService.getSignalementById(id);
-        
+
         return ResponseEntity.ok(ApiResponse.success(signalement, "Signalement récupéré avec succès"));
     }
-    
+
     /**
      * Récupérer les signalements de l'utilisateur connecté
      */
@@ -133,26 +135,26 @@ public class SignalementController {
     @PreAuthorize("hasAnyRole('USER', 'MANAGER')")
     public ResponseEntity<ApiResponse<?>> getMySignalements(
             Principal principal) {
-        
+
         log.info("Récupération des signalements de l'utilisateur: {}", principal.getName());
         List<SignalementResponse> signalements = signalementService.getSignalementsByUser(principal.getName());
-        
+
         return ResponseEntity.ok(ApiResponse.success(signalements, "Signalements récupérés avec succès"));
     }
-    
+
     /**
      * Récupérer les signalements par statut
      */
     @GetMapping("/statut/{statut}")
     public ResponseEntity<ApiResponse<?>> getSignalementsByStatut(
             @PathVariable String statut) {
-        
+
         log.info("Récupération des signalements avec le statut: {}", statut);
         List<SignalementResponse> signalements = signalementService.getSignalementsByStatut(statut);
-        
+
         return ResponseEntity.ok(ApiResponse.success(signalements, "Signalements récupérés avec succès"));
     }
-    
+
     /**
      * Récupérer les signalements dans une zone géographique (PostGIS)
      */
@@ -162,15 +164,15 @@ public class SignalementController {
             @RequestParam Double maxLat,
             @RequestParam Double minLon,
             @RequestParam Double maxLon) {
-        
+
         log.info("Récupération des signalements dans la zone: minLat={}, maxLat={}, minLon={}, maxLon={}",
                 minLat, maxLat, minLon, maxLon);
         List<SignalementResponse> signalements = signalementService
                 .getSignalementsByGeographicBounds(minLat, maxLat, minLon, maxLon);
-        
+
         return ResponseEntity.ok(ApiResponse.success(signalements, "Signalements récupérés avec succès"));
     }
-    
+
     /**
      * Mettre à jour un signalement
      */
@@ -179,13 +181,13 @@ public class SignalementController {
     public ResponseEntity<ApiResponse<?>> updateSignalement(
             @PathVariable String id,
             @Valid @RequestBody SignalementRequest request) {
-        
+
         log.info("Mise à jour du signalement: {}", id);
         SignalementResponse response = signalementService.updateSignalement(id, request);
-        
+
         return ResponseEntity.ok(ApiResponse.success(response, "Signalement mis à jour avec succès"));
     }
-    
+
     /**
      * Mettre à jour le statut d'un signalement
      */
@@ -194,121 +196,119 @@ public class SignalementController {
     public ResponseEntity<ApiResponse<?>> updateStatut(
             @PathVariable String id,
             @RequestParam String statut) {
-        
+
         log.info("Mise à jour du statut du signalement {} avec le nouveau statut: {}", id, statut);
         SignalementResponse response = signalementService.updateStatut(id, statut);
-        
+
         return ResponseEntity.ok(ApiResponse.success(response, "Statut mis à jour avec succès"));
     }
-    
-    /**
-     * Mettre à jour le pourcentage d'avancement
-     */
-    @PatchMapping("/{id}/avancement")
-    @PreAuthorize("hasAnyRole('MANAGER')")
-    public ResponseEntity<ApiResponse<?>> updateAvancement(
-            @PathVariable String id,
-            @RequestParam Integer pourcentage) {
-        
-        log.info("Mise à jour du pourcentage d'avancement du signalement {} à: {}%", id, pourcentage);
-        SignalementResponse response = signalementService.updateAvancement(id, pourcentage);
-        
-        return ResponseEntity.ok(ApiResponse.success(response, "Avancement mis à jour avec succès"));
-    }
-    
+
     /**
      * Supprimer un signalement
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER')")
     public ResponseEntity<ApiResponse<?>> deleteSignalement(@PathVariable String id) {
-        
+
         log.info("Suppression du signalement: {}", id);
         signalementService.deleteSignalement(id);
-        
+
         return ResponseEntity.ok(ApiResponse.success(null, "Signalement supprimé avec succès"));
     }
-    
+
     /**
      * Obtenir les statistiques des signalements
      */
     @GetMapping("/stats/dashboard")
     public ResponseEntity<ApiResponse<?>> getStatistics() {
-        
+
         log.info("Récupération des statistiques des signalements");
         SignalementStatisticsResponse stats = signalementService.getStatistics();
-        
+
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques récupérées avec succès"));
     }
-    
+
     /**
      * Synchroniser tous les signalements non synchronisés vers Firebase
      */
     @PostMapping("/sync/push-all")
     @PreAuthorize("hasAnyRole('MANAGER')")
     public ResponseEntity<ApiResponse<?>> syncPushAll() {
-        
+
         log.info("Synchronisation de tous les signalements vers Firebase");
         signalementService.synchronizeAllPending();
-        
-        return ResponseEntity.ok(ApiResponse.success("Tous les signalements ont été synchronisés", "Synchronisation vers Firebase effectuée"));
+
+        return ResponseEntity.ok(ApiResponse.success("Tous les signalements ont été synchronisés",
+                "Synchronisation vers Firebase effectuée"));
     }
-    
+
     /**
      * Synchroniser les données depuis Firebase
      */
     @PostMapping("/sync/pull-all")
     @PreAuthorize("hasAnyRole('MANAGER')")
     public ResponseEntity<ApiResponse<?>> syncPullAll() {
-        
+
         log.info("Synchronisation des données depuis Firebase");
         List<SignalementResponse> signalements = signalementService.syncFromFirebase();
-        
+
         return ResponseEntity.ok(ApiResponse.success(signalements, "Synchronisation depuis Firebase effectuée"));
     }
-    
+
     /**
      * TEST ENDPOINT - Synchroniser vers Firebase SANS authentification
      */
     @PostMapping("/test/sync-firebase-push")
     public ResponseEntity<ApiResponse<?>> testSyncToFirebase() {
-        
+
         log.info("TEST: Synchronisation vers Firebase");
-        signalementService.synchronizeAllPending();
+        syncService.invalidateOnlineCache();
         
+        // Vérifier la connexion une fois pour peupler le cache
+        long start = System.currentTimeMillis();
+        boolean isOnline = syncService.isOnline();
+        long duration = System.currentTimeMillis() - start;
+        
+        if (!isOnline) {
+            log.warn("❌ Firebase offline - Impossible de syncer");
+            return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("Firebase offline - Synchronisation impossible", "FIREBASE_UNAVAILABLE", 503));
+        }
+        
+        log.info("✅ Connexion Firebase OK en {}ms", duration);
+        signalementService.synchronizeAllPending();
+
         return ResponseEntity.ok(ApiResponse.success(
-            null, 
-            "✅ Sync PUSH à Firebase - Tous les signalements non synchronisés ont été envoyés"
-        ));
+                null,
+                "✅ Sync PUSH à Firebase - Tous les signalements non synchronisés ont été envoyés"));
     }
-    
+
     /**
      * TEST ENDPOINT - Récupérer depuis Firebase SANS authentification
      */
     @PostMapping("/test/sync-firebase-pull")
     public ResponseEntity<ApiResponse<?>> testSyncFromFirebase() {
-        
+
         log.info("TEST: Récupération des données depuis Firebase");
+        syncService.invalidateOnlineCache();
         List<SignalementResponse> signalements = signalementService.syncFromFirebase();
-        
+
         return ResponseEntity.ok(ApiResponse.success(
-            signalements,
-            "✅ Sync PULL depuis Firebase - " + signalements.size() + " signalements récupérés"
-        ));
+                signalements,
+                "✅ Sync PULL depuis Firebase - " + signalements.size() + " signalements récupérés"));
     }
-    
+
     /**
      * TEST ENDPOINT - Récupérer tous les signalements SANS authentification
      */
     @GetMapping("/test/all")
     public ResponseEntity<ApiResponse<?>> testGetAll() {
-        
+
         log.info("TEST: Récupération de tous les signalements");
         List<SignalementResponse> signalements = signalementService.getAllSignalements();
-        
+
         return ResponseEntity.ok(ApiResponse.success(
-            signalements,
-            "✅ " + signalements.size() + " signalements récupérés"
-        ));
+                signalements,
+                "✅ " + signalements.size() + " signalements récupérés"));
     }
 }
