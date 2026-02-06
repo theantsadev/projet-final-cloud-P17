@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.cloud.FirestoreClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -151,6 +152,22 @@ public class FirebaseConfig {
             }
         }
         log.error("❌ Firestore non disponible - FirebaseApp est null");
+        throw new RuntimeException("FirebaseApp non initialisée");
+    }
+
+    @Bean
+    public FirebaseAuth firebaseAuth(FirebaseApp firebaseApp) {
+        if (firebaseApp != null) {
+            try {
+                FirebaseAuth auth = FirebaseAuth.getInstance(firebaseApp);
+                log.info("🔐 Firebase Auth connecté avec l'app: {}", firebaseApp.getName());
+                return auth;
+            } catch (Exception e) {
+                log.error("❌ ERREUR Firebase Auth: {}", e.getMessage());
+                throw new RuntimeException("Erreur de connexion Firebase Auth", e);
+            }
+        }
+        log.error("❌ Firebase Auth non disponible - FirebaseApp est null");
         throw new RuntimeException("FirebaseApp non initialisée");
     }
 }
