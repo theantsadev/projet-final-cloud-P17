@@ -2,6 +2,9 @@ package com.idp.service;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.idp.entity.User;
 import com.idp.entity.UserSession;
 import com.idp.entity.LoginAttempt;
@@ -36,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SyncService {
 
     private final Firestore firestore;
+    private final FirebaseAuth firebaseAuth;
     private final UserRepository userRepository;
     private final UserSessionRepository sessionRepository;
     private final LoginAttemptRepository loginAttemptRepository;
@@ -55,7 +59,8 @@ public class SyncService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     // Cache du statut de connexion (évite les appels répétés lents)
-    private static final long CACHE_DURATION_MS = 5_000; // 5 secondes (réduit pour réagir plus vite au changement de connexion)
+    private static final long CACHE_DURATION_MS = 5_000; // 5 secondes (réduit pour réagir plus vite au changement de
+                                                         // connexion)
     private static final int CONNECTION_TIMEOUT_SECONDS = 10; // 10 secondes max pour vérifier (augmenté)
     private final AtomicBoolean cachedOnlineStatus = new AtomicBoolean(false);
     private final AtomicLong lastOnlineCheck = new AtomicLong(0);
@@ -411,10 +416,12 @@ public class SyncService {
             log.info("✅ Firebase ONLINE - {} documents dans collection users", result.size());
             return true;
         } catch (TimeoutException e) {
-            log.warn("⏱️ Timeout lors de la vérification Firebase ({} secondes) - Firebase probablement inaccessible", CONNECTION_TIMEOUT_SECONDS);
+            log.warn("⏱️ Timeout lors de la vérification Firebase ({} secondes) - Firebase probablement inaccessible",
+                    CONNECTION_TIMEOUT_SECONDS);
             return false;
         } catch (ExecutionException e) {
-            log.warn("❌ Firebase ExecutionException: {}", e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            log.warn("❌ Firebase ExecutionException: {}",
+                    e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
             return false;
         } catch (InterruptedException e) {
             log.warn("❌ Firebase InterruptedException: {}", e.getMessage());
@@ -434,17 +441,17 @@ public class SyncService {
     }
 
     /**
-     * Synchroniser un utilisateur vers Firestore (PostgreSQL → Firestore)
+     * Synchroniser un utilisateur vers Firebase (Auth + Firestore)
      */
     @Transactional
     public void syncUserToFirestore(User user) {
-        log.info("📤 Sync PostgreSQL→Firestore - User: {}", user.getEmail());
+        log.info("📤 Sync PostgreSQL→Firebase - User: {}", user.getEmail());
 
         boolean online = isOnline();
-        log.info("   🌐 isOnline() = {} (cache: lastCheck={}ms ago)", 
-            online, 
-            System.currentTimeMillis() - lastOnlineCheck.get());
-        
+        log.info("   🌐 isOnline() = {} (cache: lastCheck={}ms ago)",
+                online,
+                System.currentTimeMillis() - lastOnlineCheck.get());
+
         if (!online) {
             log.warn("   ❌ Firebase offline - User {} reste PENDING", user.getEmail());
             user.setSyncStatus("PENDING");
@@ -453,13 +460,17 @@ public class SyncService {
         }
 
         try {
-            Map<String, Object> userData = prepareUserData(user);
-            userData.put("source", "POSTGRESQL");
-            userData.put("localUpdatedAt", formatDate(LocalDateTime.now()));
+            // 1. Créer ou mettre à jour sur Firebase Auth
+            createOrUpdateFirebaseAuthUser(user);
 
+            // 2. Synchroniser vers Firestore
             if (user.getFirestoreId() == null) {
                 user.setFirestoreId("user_" + user.getId());
             }
+
+            Map<String, Object> userData = prepareUserData(user);
+            userData.put("source", "POSTGRESQL");
+            userData.put("localUpdatedAt", formatDate(LocalDateTime.now()));
 
             ApiFuture<WriteResult> future = firestore
                     .collection(FIRESTORE_USERS_COLLECTION)
@@ -471,12 +482,46 @@ public class SyncService {
             user.setSyncStatus("SYNCED");
             userRepository.save(user);
 
-            log.info("✅ Utilisateur {} syncé PostgreSQL→Firestore", user.getEmail());
+            log.info("✅ Utilisateur {} complètement syncé (Auth + Firestore)", user.getEmail());
 
         } catch (Exception e) {
             user.setSyncStatus("FAILED");
             userRepository.save(user);
             log.error("❌ Erreur sync utilisateur {}: {}", user.getEmail(), e.getMessage());
+        }
+    }
+
+    /**
+     * Créer ou mettre à jour l'utilisateur sur Firebase Auth
+     */
+    private void createOrUpdateFirebaseAuthUser(User user) throws FirebaseAuthException {
+        try {
+            // Vérifier si l'utilisateur existe déjà dans Firebase Auth
+            UserRecord existingUser = firebaseAuth.getUserByEmail(user.getEmail());
+            log.info("✏️ Utilisateur {} existe déjà dans Firebase Auth (UID: {})", user.getEmail(),
+                    existingUser.getUid());
+
+        } catch (FirebaseAuthException e) {
+            if (e.getErrorCode().equals("USER_NOT_FOUND")) {
+                // L'utilisateur n'existe pas → le créer
+                log.info("🆕 Création nouvel utilisateur {} dans Firebase Auth", user.getEmail());
+
+                UserRecord.CreateRequest request = new UserRecord.CreateRequest()
+                        .setEmail(user.getEmail())
+                        .setDisplayName(user.getFullName() != null ? user.getFullName() : "User")
+                        .setPhoneNumber(user.getPhone());
+
+                UserRecord newUser = firebaseAuth.createUser(request);
+                log.info("✅ Utilisateur {} créé sur Firebase Auth (UID: {})", user.getEmail(), newUser.getUid());
+
+                // Sauvegarder l'UID Firebase pour référence
+                if (user.getFirestoreId() == null) {
+                    user.setFirestoreId(newUser.getUid());
+                }
+            } else {
+                // Autre erreur
+                throw e;
+            }
         }
     }
 
