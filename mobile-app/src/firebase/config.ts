@@ -3,21 +3,21 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-// Configuration Firebase - Project: projet cloud P17
 
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA0OBiUCmQ2Na1bn-2fX2CvCjEV9_j7SsM",
-  authDomain: "projet-cloud-p17-89206.firebaseapp.com",
-  projectId: "projet-cloud-p17-89206",
-  storageBucket: "projet-cloud-p17-89206.firebasestorage.app",
-  messagingSenderId: "798891976818",
-  appId: "1:798891976818:web:b65c89a2ea83adfca5faeb",
-  measurementId: "G-QLJ62H7CXW"
+  apiKey: "AIzaSyCS8Nny0FwraiDeQ3aDBMuS40Nbjz9WGkY",
+  authDomain: "idp-dev-85c8d.firebaseapp.com",
+  databaseURL: "https://idp-dev-85c8d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "idp-dev-85c8d",
+  storageBucket: "idp-dev-85c8d.firebasestorage.app",
+  messagingSenderId: "149925149083",
+  appId: "1:149925149083:web:b6ea71804748697c45893e"
 };
 
-// Initialiser Firebase
-const app = initializeApp(firebaseConfig)
-
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 // Initialiser les services
 export const auth = getAuth(app)
 export const db = getFirestore(app)

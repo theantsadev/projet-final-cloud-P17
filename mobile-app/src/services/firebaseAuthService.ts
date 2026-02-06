@@ -38,11 +38,17 @@ class FirebaseAuthService {
         return {
           id: uid,
           email: data.email || '',
-          fullName: data.fullName || data.full_name || '',
+          full_name: data.full_name || '',
           phone: data.phone || '',
-          role: data.role || 'USER',
-          isActive: data.isActive !== false,
-          createdAt: data.createdAt?.toDate()
+          is_active: data.is_active !== false,
+          is_locked: data.is_locked || false,
+          failed_login_attempts: data.failed_login_attempts || 0,
+          last_failed_login: data.last_failed_login?.toDate(),
+          last_login: data.last_login?.toDate(),
+          created_at: data.created_at?.toDate() || new Date(),
+          updated_at: data.updated_at?.toDate() || new Date(),
+          firestore_id: uid,
+          sync_status: 'SYNCED'
         }
       }
       return null
@@ -68,29 +74,42 @@ class FirebaseAuthService {
         const newUser: User = {
           id: userCredential.user.uid,
           email: credentials.email,
-          fullName: userCredential.user.displayName || credentials.email.split('@')[0],
-          role: 'USER',
-          isActive: true
+          full_name: userCredential.user.displayName || credentials.email.split('@')[0],
+          is_active: true,
+          is_locked: false,
+          failed_login_attempts: 0,
+          created_at: new Date(),
+          updated_at: new Date(),
+          firestore_id: userCredential.user.uid,
+          sync_status: 'PENDING'
         }
         
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: newUser.email,
-          fullName: newUser.fullName,
-          role: newUser.role,
-          isActive: newUser.isActive,
-          createdAt: serverTimestamp()
+          full_name: newUser.full_name,
+          is_active: newUser.is_active,
+          is_locked: newUser.is_locked,
+          failed_login_attempts: newUser.failed_login_attempts,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
         })
         
         this.currentUser = newUser
         return { success: true, message: 'Connexion réussie', user: newUser }
       }
 
-      // Vérifier le rôle - seulement USER autorisé
-      if (user.role !== 'USER') {
-        await this.logout()
+      // Vérifier le compte - pas bloqué et actif
+      if (user.is_locked) {
         return { 
           success: false, 
-          message: 'Accès refusé. Cette application est réservée aux utilisateurs.' 
+          message: 'Compte bloqué après trop de tentatives. Contactez l\'administrateur.' 
+        }
+      }
+
+      if (!user.is_active) {
+        return { 
+          success: false, 
+          message: 'Compte désactivé.' 
         }
       }
       
@@ -136,26 +155,33 @@ class FirebaseAuthService {
 
       // Mettre à jour le profil Firebase
       await updateProfile(userCredential.user, {
-        displayName: data.fullName
+        displayName: data.full_name
       })
 
       // Créer le document utilisateur dans Firestore
       const newUser: User = {
         id: userCredential.user.uid,
         email: data.email,
-        fullName: data.fullName,
+        full_name: data.full_name,
         phone: data.phone,
-        role: 'USER',
-        isActive: true
+        is_active: true,
+        is_locked: false,
+        failed_login_attempts: 0,
+        created_at: new Date(),
+        updated_at: new Date(),
+        firestore_id: userCredential.user.uid,
+        sync_status: 'PENDING'
       }
 
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: newUser.email,
-        fullName: newUser.fullName,
+        full_name: newUser.full_name,
         phone: newUser.phone || '',
-        role: 'USER',
-        isActive: true,
-        createdAt: serverTimestamp()
+        is_active: true,
+        is_locked: false,
+        failed_login_attempts: 0,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
       })
 
       this.currentUser = newUser

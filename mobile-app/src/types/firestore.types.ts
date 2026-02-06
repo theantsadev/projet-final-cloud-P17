@@ -1,7 +1,15 @@
 // Types Firestore correspondant EXACTEMENT au projet identity-provider
 // Basé sur les entités Java du backend
 
-export type StatutSignalement = 'NOUVEAU' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
+/**
+ * Collection: statut_avancement_signalement
+ * Correspond à l'entité StatutAvancementSignalement.java du backend
+ */
+export interface StatutAvancementSignalement {
+  id: string                      // UUID
+  statut: string                  // 'NOUVEAU' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
+  avancement: number              // 0-100 (pourcentage d'avancement)
+}
 
 /**
  * Collection: users
@@ -13,6 +21,7 @@ export interface User {
   password_hash?: string          // Hash du mot de passe (géré par Firebase Auth)
   full_name: string               // Nom complet
   phone?: string                  // Téléphone
+  role?: string                   // Role ID (relation ManyToOne)
   is_active: boolean              // Compte actif
   is_locked: boolean              // Compte bloqué après 3 tentatives
   failed_login_attempts: number   // Nombre de tentatives échouées
@@ -20,7 +29,7 @@ export interface User {
   last_login?: Date               // Date dernière connexion réussie
   created_at: Date                // Date de création
   updated_at: Date                // Date de dernière modification
-  firestore_id?: string           // ID Firestore (référence)
+  firestore_id?: string           // ID Firestore (référence unique)
   sync_status: 'PENDING' | 'SYNCED' | 'FAILED'  // Statut de synchronisation
 }
 
@@ -31,15 +40,16 @@ export interface User {
 export interface Signalement {
   id: string                      // ID unique (UUID)
   titre: string                   // Titre du signalement (max 500 caractères)
-  description: string             // Description détaillée (TEXT)
-  statut: StatutSignalement       // Statut du signalement
+  description?: string            // Description détaillée (TEXT)
+  statut_id: string               // ID du statut d'avancement (FK vers statut_avancement_signalement)
+  statut?: StatutAvancementSignalement  // Relation avec statut complet (optionnel à la lecture)
   latitude: number                // Latitude GPS (obligatoire)
   longitude: number               // Longitude GPS (obligatoire)
-  surfaceM2?: number              // Surface en m² (BigDecimal)
+  surface_m2?: number             // Surface en m² (BigDecimal)
   budget?: number                 // Budget estimé (BigDecimal)
-  entrepriseConcernee?: string    // Entreprise concernée (max 255 caractères)
-  pourcentageAvancement: number   // Pourcentage d'avancement (0-100)
+  entreprise_concernee?: string   // Entreprise concernée (max 255 caractères)
   user_id: string                 // ID utilisateur créateur (FK vers users)
+  signaleur?: User                // Relation avec utilisateur (optionnel à la lecture)
   firebase_id?: string            // ID Firebase (référence)
   is_synchronized: boolean        // Statut de synchronisation avec PostgreSQL
   last_synced_at?: Date           // Date de dernière synchronisation
@@ -104,10 +114,10 @@ export interface SignalementCreateRequest {
   description?: string
   latitude: number
   longitude: number
-  surfaceM2?: number
+  surface_m2?: number
   budget?: number
-  entrepriseConcernee?: string
-  pourcentageAvancement?: number
+  entreprise_concernee?: string
+  statut_id?: string              // ID du statut (défaut: NOUVEAU)
 }
 
 export interface SignalementUpdateRequest {
@@ -115,14 +125,14 @@ export interface SignalementUpdateRequest {
   description?: string
   latitude?: number
   longitude?: number
-  surfaceM2?: number
+  surface_m2?: number
   budget?: number
-  entrepriseConcernee?: string
-  pourcentageAvancement?: number
+  entreprise_concernee?: string
+  statut_id?: string
 }
 
 export interface SignalementUpdateStatusRequest {
-  statut: StatutSignalement
+  statut_id: string               // ID du nouveau statut
 }
 
 export interface RegisterRequest {
@@ -144,12 +154,14 @@ export interface UnlockRequest {
 // Réponses et statistiques
 
 export interface SignalementRecap {
-  total: number
-  nouveaux: number
-  enCours: number
-  termines: number
-  annules: number
-  pourcentageTermines: number
+  total: number                  // totalSignalements
+  nouveaux: number               // signalementNouveaux
+  enCours: number                // signalementEnCours
+  termines: number               // signalementTermines
+  annules: number                // signalementAnnules
+  totalSurfaceM2: number         // Somme des surfaces en m²
+  totalBudget: number            // Somme des budgets
+  averageAvancement: number      // Pourcentage moyen d'avancement
 }
 
 export interface ApiResponse<T = any> {
@@ -161,16 +173,16 @@ export interface ApiResponse<T = any> {
 
 // Labels et configurations
 
-export const statutLabels: Record<StatutSignalement, string> = {
-  NOUVEAU: 'Nouveau',
-  EN_COURS: 'En cours',
-  TERMINE: 'Terminé',
-  ANNULE: 'Annulé'
+export const statutLabels: Record<string, string> = {
+  'NOUVEAU': 'Nouveau',
+  'EN_COURS': 'En cours',
+  'TERMINE': 'Terminé',
+  'ANNULE': 'Annulé'
 }
 
-export const statutColors: Record<StatutSignalement, string> = {
-  NOUVEAU: 'primary',
-  EN_COURS: 'warning',
-  TERMINE: 'success',
-  ANNULE: 'danger'
+export const statutColors: Record<string, string> = {
+  'NOUVEAU': 'primary',
+  'EN_COURS': 'warning',
+  'TERMINE': 'success',
+  'ANNULE': 'danger'
 }
