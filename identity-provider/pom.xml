@@ -118,7 +118,7 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
-                    <jvmArguments>--add-opens java.base/java.time.chrono=ALL-UNNAMED</jvmArguments>
+                    <jvmArguments>--add-opens java.base/java.time.chrono=ALL-UNNAMED -Djava.net.preferIPv4Stack=true</jvmArguments>
                 </configuration>
             </plugin>
         </plugins>

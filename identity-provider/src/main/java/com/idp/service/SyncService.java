@@ -4,6 +4,7 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.idp.entity.User;
 import com.idp.entity.UserSession;
@@ -460,8 +461,15 @@ public class SyncService {
         }
 
         try {
-            // 1. Créer ou mettre à jour sur Firebase Auth
-            createOrUpdateFirebaseAuthUser(user);
+            // 1. Créer ou mettre à jour sur Firebase Auth (non-bloquant)
+            try {
+                createOrUpdateFirebaseAuthUser(user);
+            } catch (FirebaseAuthException authEx) {
+                // Firebase Auth inaccessible (ex: identitytoolkit.googleapis.com bloqué)
+                // On continue quand même avec la sync Firestore
+                log.warn("⚠️ Firebase Auth indisponible pour {} ({}), sync Firestore uniquement",
+                        user.getEmail(), authEx.getMessage());
+            }
 
             // 2. Synchroniser vers Firestore
             if (user.getFirestoreId() == null) {
@@ -482,7 +490,7 @@ public class SyncService {
             user.setSyncStatus("SYNCED");
             userRepository.save(user);
 
-            log.info("✅ Utilisateur {} complètement syncé (Auth + Firestore)", user.getEmail());
+            log.info("✅ Utilisateur {} syncé vers Firestore", user.getEmail());
 
         } catch (Exception e) {
             user.setSyncStatus("FAILED");
@@ -502,27 +510,73 @@ public class SyncService {
                     existingUser.getUid());
 
         } catch (FirebaseAuthException e) {
-            if (e.getErrorCode().equals("USER_NOT_FOUND")) {
+            if (e.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
                 // L'utilisateur n'existe pas → le créer
                 log.info("🆕 Création nouvel utilisateur {} dans Firebase Auth", user.getEmail());
 
                 UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                         .setEmail(user.getEmail())
-                        .setDisplayName(user.getFullName() != null ? user.getFullName() : "User")
-                        .setPhoneNumber(user.getPhone());
+                        .setDisplayName(user.getFullName() != null ? user.getFullName() : "User");
 
-                UserRecord newUser = firebaseAuth.createUser(request);
-                log.info("✅ Utilisateur {} créé sur Firebase Auth (UID: {})", user.getEmail(), newUser.getUid());
+                // Ajouter le téléphone uniquement s'il est valide
+                String phone = user.getPhone();
+                if (phone != null && !phone.trim().isEmpty() && isValidPhoneNumber(phone)) {
+                    request.setPhoneNumber(phone);
+                    log.info("   📱 Téléphone défini: {}", phone);
+                } else if (phone != null && !phone.trim().isEmpty()) {
+                    log.warn("   ⚠️ Numéro de téléphone invalide ignoré: {}", phone);
+                }
 
-                // Sauvegarder l'UID Firebase pour référence
-                if (user.getFirestoreId() == null) {
-                    user.setFirestoreId(newUser.getUid());
+                try {
+                    UserRecord newUser = firebaseAuth.createUser(request);
+                    log.info("✅ Utilisateur {} créé sur Firebase Auth (UID: {})", user.getEmail(), newUser.getUid());
+
+                    // Sauvegarder l'UID Firebase pour référence
+                    if (user.getFirestoreId() == null) {
+                        user.setFirestoreId(newUser.getUid());
+                    }
+                } catch (FirebaseAuthException createError) {
+                    log.error("❌ Erreur création Firebase Auth pour {}: {} - Détail: {}", 
+                            user.getEmail(), 
+                            createError.getErrorCode(), 
+                            createError.getMessage());
+                    throw createError;
                 }
             } else {
                 // Autre erreur
+                log.error("❌ Erreur Firebase Auth - Code: {} - Message: {}", 
+                        e.getErrorCode(), 
+                        e.getMessage());
                 throw e;
             }
         }
+    }
+
+    /**
+     * Valide un numéro de téléphone pour Firebase Auth
+     * Firebase accepte les numéros au format E164: +33123456789
+     */
+    private boolean isValidPhoneNumber(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return false;
+        }
+        
+        phone = phone.trim();
+        
+        // Doit commencer par + et contenir 7-15 chiffres
+        if (!phone.startsWith("+")) {
+            log.warn("   ⚠️ Téléphone doit commencer par +: {}", phone);
+            return false;
+        }
+        
+        // Vérifier qu'il contient seulement + et des chiffres
+        String phoneDigits = phone.substring(1);
+        if (!phoneDigits.matches("\\d{7,15}")) {
+            log.warn("   ⚠️ Téléphone invalide (doit avoir 7-15 chiffres): {}", phone);
+            return false;
+        }
+        
+        return true;
     }
 
     /**
