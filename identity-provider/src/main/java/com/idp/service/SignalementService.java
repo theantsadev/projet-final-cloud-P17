@@ -214,7 +214,6 @@ public class SignalementService {
             data.put("titre", signalement.getTitre());
             data.put("description", signalement.getDescription());
             data.put("statutId", signalement.getStatut().getId());
-            data.put("avancement", signalement.getStatut().getAvancement());
             data.put("latitude", signalement.getLatitude());
             data.put("longitude", signalement.getLongitude());
             data.put("surfaceM2", signalement.getSurfaceM2());

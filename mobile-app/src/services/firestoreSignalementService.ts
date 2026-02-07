@@ -128,8 +128,9 @@ class FirestoreSignalementService {
     try {
       const q = query(
         collection(db, this.collectionName),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
+        // Note: orderBy avec where sur champs différents nécessite un index composite
+        // Tri effectué côté client pour l'instant
       )
       const querySnapshot = await getDocs(q)
 
@@ -137,6 +138,14 @@ class FirestoreSignalementService {
       for (const doc of querySnapshot.docs) {
         results.push(await docToSignalement(doc.id, doc.data()))
       }
+      
+      // Tri par createdAt décroissant côté client
+      results.sort((a, b) => {
+        const dateA = a.createdAt?.getTime() || 0
+        const dateB = b.createdAt?.getTime() || 0
+        return dateB - dateA
+      })
+      
       return results
     } catch (error) {
       console.error('Erreur getMesSignalements:', error)

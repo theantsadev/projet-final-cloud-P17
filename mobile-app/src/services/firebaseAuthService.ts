@@ -1,8 +1,8 @@
 // Service d'authentification Firebase
 // Compatible avec la structure identity-provider
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   updateProfile,
@@ -55,7 +55,7 @@ class FirebaseAuthService {
       if (userDoc.exists()) {
         const data = userDoc.data()
         return {
-          id: uid,
+          id: data.id || uid,
           email: data.email || '',
           fullName: data.fullName || '',
           phone: data.phone || '',
@@ -66,7 +66,7 @@ class FirebaseAuthService {
           lastLogin: toDateSafe(data.lastLogin),
           createdAt: toDateSafe(data.createdAt),
           updatedAt: toDateSafe(data.updatedAt),
-          firestoreId: uid,
+          firestoreId: data.firestoreId || uid,
           syncStatus: 'SYNCED'
         }
       }
@@ -81,13 +81,13 @@ class FirebaseAuthService {
   async login(credentials: LoginRequest): Promise<{ success: boolean; message: string; user?: User }> {
     try {
       const userCredential = await signInWithEmailAndPassword(
-        auth, 
-        credentials.email, 
+        auth,
+        credentials.email,
         credentials.password
       )
-      
+
       const user = await this.getUserData(userCredential.user.uid)
-      
+
       if (!user) {
         // Créer un profil par défaut si non existant dans Firestore
         const newUser: User = {
@@ -102,7 +102,7 @@ class FirebaseAuthService {
           firestoreId: userCredential.user.uid,
           syncStatus: 'PENDING'
         }
-        
+
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: newUser.email,
           fullName: newUser.fullName,
@@ -112,32 +112,32 @@ class FirebaseAuthService {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         })
-        
+
         this.currentUser = newUser
         return { success: true, message: 'Connexion réussie', user: newUser }
       }
 
       // Vérifier le compte - pas bloqué et actif
       if (user.isLocked) {
-        return { 
-          success: false, 
-          message: 'Compte bloqué après trop de tentatives. Contactez l\'administrateur.' 
+        return {
+          success: false,
+          message: 'Compte bloqué après trop de tentatives. Contactez l\'administrateur.'
         }
       }
 
       if (!user.isActive) {
-        return { 
-          success: false, 
-          message: 'Compte désactivé.' 
+        return {
+          success: false,
+          message: 'Compte désactivé.'
         }
       }
-      
+
       this.currentUser = user
       return { success: true, message: 'Connexion réussie', user }
     } catch (error: any) {
       console.error('Erreur login:', error)
       let message = 'Erreur de connexion'
-      
+
       switch (error.code) {
         case 'auth/invalid-email':
           message = 'Email invalide'
@@ -158,7 +158,7 @@ class FirebaseAuthService {
           message = 'Trop de tentatives. Réessayez plus tard.'
           break
       }
-      
+
       return { success: false, message }
     }
   }
@@ -258,7 +258,7 @@ class FirebaseAuthService {
 
   // Récupérer l'ID de l'utilisateur actuel
   getCurrentUserId(): string | null {
-    return auth.currentUser?.uid || null
+    return this.currentUser?.id || null
   }
 }
 

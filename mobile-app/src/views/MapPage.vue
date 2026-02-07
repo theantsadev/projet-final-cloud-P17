@@ -45,7 +45,7 @@
           <div class="recap-stats-row">
             <div class="recap-stat">
               <span class="stat-label">Surface totale</span>
-              <span class="stat-value">{{ (recap.totalSurfaceM2 || 0).toFixed(1) }} m²</span>
+              <span class="stat-value">{{ recap.totalSurfaceM2 }} m²</span>
             </div>
             <div class="recap-stat">
               <span class="stat-label">Budget total</span>
