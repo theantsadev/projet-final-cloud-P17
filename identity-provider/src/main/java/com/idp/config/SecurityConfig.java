@@ -48,6 +48,7 @@ public class SecurityConfig {
                                                                 "/api/signalements/statut/**", // Public statut endpoint
                                                                 "/api/signalements",
                                                                 "/api/signalements/stats/dashboard", // GET tous les signalements
+                                                                "/api/statuts/sync-firebase/all",
 
                                                                 // Swagger/OpenAPI
                                                                 "/api/swagger-ui/**",

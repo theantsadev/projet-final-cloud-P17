@@ -34,6 +34,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final SyncService syncService;
+    private final com.idp.util.EncryptionUtil encryptionUtil;
 
     @Value("${security.max.login.attempts:3}")
     private int maxLoginAttempts;
@@ -60,6 +61,7 @@ public class AuthService {
         user.setId(UUID.randomUUID().toString());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setEncryptedPassword(encryptionUtil.encrypt(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
         user.setRole(roleUser); // ← Assigner le rôle USER
@@ -70,6 +72,8 @@ public class AuthService {
         user.setFailedLoginAttempts(0);
 
         User savedUser = userRepository.save(user);
+        // Conserver le mot de passe en clair en mémoire pour la sync Firebase Auth immédiate
+        savedUser.setRawPassword(request.getPassword());
 
         // Sync vers Firestore (POSTGRESQL → Firestore)
         try {
@@ -319,6 +323,9 @@ public class AuthService {
                 throw new InvalidPasswordException();
             }
             user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            // Stocker le nouveau mot de passe chiffré pour la sync Firebase Auth
+            user.setEncryptedPassword(encryptionUtil.encrypt(request.getNewPassword()));
+            user.setRawPassword(request.getNewPassword());
         }
 
         user.setSyncStatus("PENDING");

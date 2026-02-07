@@ -14,6 +14,7 @@ import com.idp.repository.UserRepository;
 import com.idp.repository.UserSessionRepository;
 import com.idp.repository.LoginAttemptRepository;
 import com.idp.repository.SecuritySettingRepository;
+import com.idp.util.EncryptionUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,7 @@ public class SyncService {
     private final UserSessionRepository sessionRepository;
     private final LoginAttemptRepository loginAttemptRepository;
     private final SecuritySettingRepository securitySettingRepository;
+    private final EncryptionUtil encryptionUtil;
 
     // Pour gérer les listeners Firestore
     private ListenerRegistration userListener;
@@ -471,8 +473,10 @@ public class SyncService {
                         user.getEmail(), authEx.getMessage());
             }
 
-            // 2. Synchroniser vers Firestore
-            if (user.getFirestoreId() == null) {
+            // 2. Utiliser le firebaseUid comme ID du document Firestore (cohérence Auth/Firestore)
+            if (user.getFirebaseUid() != null) {
+                user.setFirestoreId(user.getFirebaseUid());
+            } else if (user.getFirestoreId() == null) {
                 user.setFirestoreId("user_" + user.getId());
             }
 
@@ -488,9 +492,9 @@ public class SyncService {
             WriteResult result = future.get();
 
             user.setSyncStatus("SYNCED");
+            // Effacer le mot de passe chiffré après sync réussie
+            user.setEncryptedPassword(null);
             userRepository.save(user);
-
-            log.info("✅ Utilisateur {} syncé vers Firestore", user.getEmail());
 
         } catch (Exception e) {
             user.setSyncStatus("FAILED");
@@ -509,6 +513,12 @@ public class SyncService {
             log.info("✏️ Utilisateur {} existe déjà dans Firebase Auth (UID: {})", user.getEmail(),
                     existingUser.getUid());
 
+            // Sauvegarder le UID Firebase Auth
+            if (user.getFirebaseUid() == null) {
+                user.setFirebaseUid(existingUser.getUid());
+                log.info("   🔗 Firebase UID sauvegardé: {}", existingUser.getUid());
+            }
+
         } catch (FirebaseAuthException e) {
             if (e.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
                 // L'utilisateur n'existe pas → le créer
@@ -517,6 +527,23 @@ public class SyncService {
                 UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                         .setEmail(user.getEmail())
                         .setDisplayName(user.getFullName() != null ? user.getFullName() : "User");
+
+                // Déchiffrer et définir le mot de passe
+                String password = user.getRawPassword();
+                if (password == null && user.getEncryptedPassword() != null) {
+                    try {
+                        password = encryptionUtil.decrypt(user.getEncryptedPassword());
+                        log.info("   🔓 Mot de passe déchiffré depuis la base pour {}", user.getEmail());
+                    } catch (Exception decryptErr) {
+                        log.error("   ❌ Impossible de déchiffrer le mot de passe pour {}", user.getEmail());
+                    }
+                }
+                if (password != null && !password.isEmpty()) {
+                    request.setPassword(password);
+                    log.info("   🔑 Mot de passe défini pour {}", user.getEmail());
+                } else {
+                    log.warn("   ⚠️ Aucun mot de passe disponible pour {} - Firebase Auth sans mot de passe", user.getEmail());
+                }
 
                 // Ajouter le téléphone uniquement s'il est valide
                 String phone = user.getPhone();
@@ -531,10 +558,9 @@ public class SyncService {
                     UserRecord newUser = firebaseAuth.createUser(request);
                     log.info("✅ Utilisateur {} créé sur Firebase Auth (UID: {})", user.getEmail(), newUser.getUid());
 
-                    // Sauvegarder l'UID Firebase pour référence
-                    if (user.getFirestoreId() == null) {
-                        user.setFirestoreId(newUser.getUid());
-                    }
+                    // Sauvegarder le UID Firebase Auth
+                    user.setFirebaseUid(newUser.getUid());
+                    log.info("   🔗 Firebase UID sauvegardé: {}", newUser.getUid());
                 } catch (FirebaseAuthException createError) {
                     log.error("❌ Erreur création Firebase Auth pour {}: {} - Détail: {}", 
                             user.getEmail(), 
@@ -771,6 +797,7 @@ public class SyncService {
         data.put("createdAt", formatDate(user.getCreatedAt()));
         data.put("updatedAt", formatDate(user.getUpdatedAt()));
         data.put("firestoreId", user.getFirestoreId());
+        data.put("firebaseUid", user.getFirebaseUid());
         data.put("syncStatus", user.getSyncStatus() != null ? user.getSyncStatus() : "PENDING");
         return data;
     }

@@ -65,33 +65,33 @@ async function getStatutById(id: string): Promise<StatutAvancementSignalement | 
 // Convertir un document Firestore en objet Signalement
 async function docToSignalement(docId: string, data: DocumentData): Promise<Signalement> {
   let statut: StatutAvancementSignalement | null = null
-  if (data.statut_id) {
-    statut = await getStatutById(data.statut_id)
+  if (data.statutId) {
+    statut = await getStatutById(data.statutId)
   }
 
   return {
     id: docId,
     titre: data.titre || '',
     description: data.description || '',
-    statut_id: data.statut_id || '',
+    statutId: data.statutId || '',
     statut: statut || undefined,
     latitude: data.latitude || 0,
     longitude: data.longitude || 0,
-    surface_m2: data.surface_m2,
+    surfaceM2: data.surfaceM2,
     budget: data.budget,
-    entreprise_concernee: data.entreprise_concernee,
-    user_id: data.user_id || '',
-    firebase_id: data.firebase_id || docId,
-    is_synchronized: data.is_synchronized || false,
-    last_synced_at: data.last_synced_at instanceof Timestamp
-      ? data.last_synced_at.toDate()
+    entrepriseConcernee: data.entrepriseConcernee,
+    userId: data.userId || '',
+    firebaseId: data.firebaseId || docId,
+    isSynchronized: data.isSynchronized || false,
+    lastSyncedAt: data.lastSyncedAt instanceof Timestamp
+      ? data.lastSyncedAt.toDate()
       : undefined,
-    created_at: data.created_at instanceof Timestamp 
-      ? data.created_at.toDate() 
-      : new Date(data.created_at || Date.now()),
-    updated_at: data.updated_at instanceof Timestamp 
-      ? data.updated_at.toDate() 
-      : new Date(data.updated_at || Date.now())
+    createdAt: data.createdAt instanceof Timestamp 
+      ? data.createdAt.toDate() 
+      : new Date(data.createdAt || Date.now()),
+    updatedAt: data.updatedAt instanceof Timestamp 
+      ? data.updatedAt.toDate() 
+      : new Date(data.updatedAt || Date.now())
   }
 }
 
@@ -103,7 +103,7 @@ class FirestoreSignalementService {
     try {
       const q = query(
         collection(db, this.collectionName),
-        orderBy('created_at', 'desc')
+        orderBy('createdAt', 'desc')
       )
       const querySnapshot = await getDocs(q)
 
@@ -128,8 +128,8 @@ class FirestoreSignalementService {
     try {
       const q = query(
         collection(db, this.collectionName),
-        where('user_id', '==', userId),
-        orderBy('created_at', 'desc')
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
       )
       const querySnapshot = await getDocs(q)
 
@@ -169,7 +169,7 @@ class FirestoreSignalementService {
 
     try {
       // Obtenir le statut NOUVEAU par défaut
-      let statutId = data.statut_id
+      let statutId = data.statutId
       if (!statutId) {
         const nouveauStatut = await getStatutByLabel('NOUVEAU')
         if (!nouveauStatut) {
@@ -181,16 +181,16 @@ class FirestoreSignalementService {
       const signalementData = {
         titre: data.titre,
         description: data.description || '',
-        statut_id: statutId,
+        statutId: statutId,
         latitude: data.latitude,
         longitude: data.longitude,
-        surface_m2: data.surface_m2 || null,
+        surfaceM2: data.surfaceM2 || null,
         budget: data.budget || null,
-        entreprise_concernee: data.entreprise_concernee || '',
-        user_id: user.id,
-        is_synchronized: false,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp()
+        entrepriseConcernee: data.entrepriseConcernee || '',
+        userId: user.id,
+        isSynchronized: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       }
 
       const docRef = await addDoc(collection(db, this.collectionName), signalementData)
@@ -201,18 +201,18 @@ class FirestoreSignalementService {
         id: docRef.id,
         titre: data.titre,
         description: data.description || '',
-        statut_id: statutId,
+        statutId: statutId,
         statut: statut || undefined,
         latitude: data.latitude,
         longitude: data.longitude,
-        surface_m2: data.surface_m2,
+        surfaceM2: data.surfaceM2,
         budget: data.budget,
-        entreprise_concernee: data.entreprise_concernee,
-        user_id: user.id,
-        firebase_id: docRef.id,
-        is_synchronized: false,
-        created_at: new Date(),
-        updated_at: new Date()
+        entrepriseConcernee: data.entrepriseConcernee,
+        userId: user.id,
+        firebaseId: docRef.id,
+        isSynchronized: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     } catch (error) {
       console.error('Erreur create signalement:', error)
@@ -233,7 +233,7 @@ class FirestoreSignalementService {
       if (!signalement) {
         throw new Error('Signalement non trouvé')
       }
-      if (signalement.user_id !== userId) {
+      if (signalement.userId !== userId) {
         throw new Error('Vous ne pouvez supprimer que vos propres signalements')
       }
 
@@ -248,17 +248,17 @@ class FirestoreSignalementService {
   async update(id: string, data: Partial<SignalementCreateRequest>): Promise<void> {
     try {
       const updateData: any = {
-        updated_at: serverTimestamp()
+        updatedAt: serverTimestamp()
       }
 
       if (data.titre !== undefined) updateData.titre = data.titre
       if (data.description !== undefined) updateData.description = data.description
       if (data.latitude !== undefined) updateData.latitude = data.latitude
       if (data.longitude !== undefined) updateData.longitude = data.longitude
-      if (data.surface_m2 !== undefined) updateData.surface_m2 = data.surface_m2
+      if (data.surfaceM2 !== undefined) updateData.surfaceM2 = data.surfaceM2
       if (data.budget !== undefined) updateData.budget = data.budget
-      if (data.entreprise_concernee !== undefined) updateData.entreprise_concernee = data.entreprise_concernee
-      if (data.statut_id !== undefined) updateData.statut_id = data.statut_id
+      if (data.entrepriseConcernee !== undefined) updateData.entrepriseConcernee = data.entrepriseConcernee
+      if (data.statutId !== undefined) updateData.statutId = data.statutId
 
       const docRef = doc(db, this.collectionName, id)
       await updateDoc(docRef, updateData)
@@ -280,14 +280,14 @@ class FirestoreSignalementService {
       if (!signalement) {
         throw new Error('Signalement non trouvé')
       }
-      if (signalement.user_id !== userId) {
+      if (signalement.userId !== userId) {
         throw new Error('Vous ne pouvez modifier que vos propres signalements')
       }
 
       const docRef = doc(db, this.collectionName, id)
       await updateDoc(docRef, {
-        statut_id: statutId,
-        updated_at: serverTimestamp()
+        statutId: statutId,
+        updatedAt: serverTimestamp()
       })
     } catch (error) {
       console.error('Erreur updateStatus:', error)
@@ -305,7 +305,7 @@ class FirestoreSignalementService {
 
       const q = query(
         collection(db, this.collectionName),
-        where('user_id', '==', userId)
+        where('userId', '==', userId)
       )
       const querySnapshot = await getDocs(q)
       const signalements: Signalement[] = []
@@ -320,7 +320,7 @@ class FirestoreSignalementService {
       const annules = signalements.filter(s => s.statut?.statut === 'ANNULE').length
 
       // Calculer les totaux et moyennes
-      const totalSurfaceM2 = signalements.reduce((sum, s) => sum + (s.surface_m2 || 0), 0)
+      const totalSurfaceM2 = signalements.reduce((sum, s) => sum + (s.surfaceM2 || 0), 0)
       const totalBudget = signalements.reduce((sum, s) => sum + (s.budget || 0), 0)
       const averageAvancement = total > 0 
         ? Math.round(
