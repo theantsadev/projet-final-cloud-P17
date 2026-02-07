@@ -10,6 +10,9 @@
           <ion-button @click="refreshSignalements">
             <ion-icon :icon="refreshOutline"></ion-icon>
           </ion-button>
+          <ion-button @click="handleLogout" color="danger">
+            <ion-icon :icon="logOutOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -220,18 +223,26 @@ import {
 } from '@ionic/vue'
 import {
   refreshOutline, addOutline, closeOutline, locationOutline,
-  calendarOutline, arrowBackOutline
+  calendarOutline, arrowBackOutline, logOutOutline
 } from 'ionicons/icons'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSignalementStore } from '@/stores/signalementStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
 import { statutColors } from '@/types/firestore.types'
 import type { Signalement } from '@/types/firestore.types'
 import firestoreSignalementService from '@/services/firestoreSignalementService'
 
 const signalementStore = useSignalementStore()
 const authStore = useAuthStore()
+const router = useRouter()
+
+// Déconnexion
+const handleLogout = async () => {
+  await authStore.logout()
+  router.replace('/login')
+}
 
 // Map
 const mapContainer = ref<HTMLElement | null>(null)
