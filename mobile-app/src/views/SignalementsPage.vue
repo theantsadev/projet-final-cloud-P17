@@ -71,13 +71,13 @@
       <ion-list v-if="displayedSignalements.length > 0">
         <ion-item-sliding v-for="sig in displayedSignalements" :key="sig.id">
           <ion-item button @click="viewDetails(sig)">
-            <ion-avatar slot="start" :style="{ background: getStatutColor(sig.statut_id) }">
+            <ion-avatar slot="start" :style="{ background: getStatutColor(sig.statutId) }">
               <span style="color: white; font-weight: bold; font-size: 18px">📍</span>
             </ion-avatar>
             <ion-label>
               <h2>{{ sig.titre }}</h2>
               <p>{{ sig.latitude.toFixed(4) }}, {{ sig.longitude.toFixed(4) }}</p>
-              <p class="date-text">{{ formatDate(sig.created_at) }}</p>
+              <p class="date-text">{{ formatDate(sig.createdAt) }}</p>
             </ion-label>
             <ion-chip slot="end" :color="getStatutChipColor(sig.statut?.statut)" size="small">
               {{ sig.statut?.statut || 'Inconnu' }}
@@ -164,10 +164,10 @@
             </ion-button>
           </ion-item>
 
-          <ion-item v-if="selectedSignalement.surface_m2">
+          <ion-item v-if="selectedSignalement.surfaceM2">
             <ion-label>
               <h3>Surface</h3>
-              <p>{{ selectedSignalement.surface_m2 }} m²</p>
+              <p>{{ selectedSignalement.surfaceM2 }} m²</p>
             </ion-label>
           </ion-item>
 
@@ -178,10 +178,10 @@
             </ion-label>
           </ion-item>
 
-          <ion-item v-if="selectedSignalement.entreprise_concernee">
+          <ion-item v-if="selectedSignalement.entrepriseConcernee">
             <ion-label>
               <h3>Entreprise</h3>
-              <p>{{ selectedSignalement.entreprise_concernee }}</p>
+              <p>{{ selectedSignalement.entrepriseConcernee }}</p>
             </ion-label>
           </ion-item>
 
@@ -189,7 +189,7 @@
             <ion-icon :icon="calendarOutline" slot="start" color="primary"></ion-icon>
             <ion-label>
               <h3>Date du signalement</h3>
-              <p>{{ formatDateLong(selectedSignalement.created_at) }}</p>
+              <p>{{ formatDateLong(selectedSignalement.createdAt) }}</p>
             </ion-label>
           </ion-item>
         </ion-list>
@@ -327,7 +327,7 @@ const formatDateLong = (date: Date | string | undefined) => {
 }
 
 const canDelete = (sig: Signalement): boolean => {
-  return sig.user_id === authStore.currentUser?.id
+  return sig.userId === authStore.currentUser?.id
 }
 
 // Actions

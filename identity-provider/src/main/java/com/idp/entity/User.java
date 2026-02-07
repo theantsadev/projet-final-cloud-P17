@@ -62,6 +62,17 @@ public class User {
     @Column(name = "firestore_id", unique = true, length = 255)
     private String firestoreId;
 
+    @Column(name = "firebase_uid", length = 128)
+    private String firebaseUid;
+
     @Column(name = "sync_status", length = 20)
     private String syncStatus = "PENDING";
+
+    // Mot de passe chiffré (AES) pour la sync Firebase Auth — effacé après sync réussie
+    @Column(name = "encrypted_password", length = 512)
+    private String encryptedPassword;
+
+    // Mot de passe en clair, NON persisté en base - utilisé uniquement en mémoire
+    @Transient
+    private String rawPassword;
 }

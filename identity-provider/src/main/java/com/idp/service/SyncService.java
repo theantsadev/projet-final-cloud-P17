@@ -4,6 +4,7 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.AuthErrorCode;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.idp.entity.User;
 import com.idp.entity.UserSession;
@@ -13,6 +14,7 @@ import com.idp.repository.UserRepository;
 import com.idp.repository.UserSessionRepository;
 import com.idp.repository.LoginAttemptRepository;
 import com.idp.repository.SecuritySettingRepository;
+import com.idp.util.EncryptionUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +46,7 @@ public class SyncService {
     private final UserSessionRepository sessionRepository;
     private final LoginAttemptRepository loginAttemptRepository;
     private final SecuritySettingRepository securitySettingRepository;
+    private final EncryptionUtil encryptionUtil;
 
     // Pour gérer les listeners Firestore
     private ListenerRegistration userListener;
@@ -460,11 +463,20 @@ public class SyncService {
         }
 
         try {
-            // 1. Créer ou mettre à jour sur Firebase Auth
-            createOrUpdateFirebaseAuthUser(user);
+            // 1. Créer ou mettre à jour sur Firebase Auth (non-bloquant)
+            try {
+                createOrUpdateFirebaseAuthUser(user);
+            } catch (FirebaseAuthException authEx) {
+                // Firebase Auth inaccessible (ex: identitytoolkit.googleapis.com bloqué)
+                // On continue quand même avec la sync Firestore
+                log.warn("⚠️ Firebase Auth indisponible pour {} ({}), sync Firestore uniquement",
+                        user.getEmail(), authEx.getMessage());
+            }
 
-            // 2. Synchroniser vers Firestore
-            if (user.getFirestoreId() == null) {
+            // 2. Utiliser le firebaseUid comme ID du document Firestore (cohérence Auth/Firestore)
+            if (user.getFirebaseUid() != null) {
+                user.setFirestoreId(user.getFirebaseUid());
+            } else if (user.getFirestoreId() == null) {
                 user.setFirestoreId("user_" + user.getId());
             }
 
@@ -480,9 +492,9 @@ public class SyncService {
             WriteResult result = future.get();
 
             user.setSyncStatus("SYNCED");
+            // Effacer le mot de passe chiffré après sync réussie
+            user.setEncryptedPassword(null);
             userRepository.save(user);
-
-            log.info("✅ Utilisateur {} complètement syncé (Auth + Firestore)", user.getEmail());
 
         } catch (Exception e) {
             user.setSyncStatus("FAILED");
@@ -501,28 +513,96 @@ public class SyncService {
             log.info("✏️ Utilisateur {} existe déjà dans Firebase Auth (UID: {})", user.getEmail(),
                     existingUser.getUid());
 
+            // Sauvegarder le UID Firebase Auth
+            if (user.getFirebaseUid() == null) {
+                user.setFirebaseUid(existingUser.getUid());
+                log.info("   🔗 Firebase UID sauvegardé: {}", existingUser.getUid());
+            }
+
         } catch (FirebaseAuthException e) {
-            if (e.getErrorCode().equals("USER_NOT_FOUND")) {
+            if (e.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
                 // L'utilisateur n'existe pas → le créer
                 log.info("🆕 Création nouvel utilisateur {} dans Firebase Auth", user.getEmail());
 
                 UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                         .setEmail(user.getEmail())
-                        .setDisplayName(user.getFullName() != null ? user.getFullName() : "User")
-                        .setPhoneNumber(user.getPhone());
+                        .setDisplayName(user.getFullName() != null ? user.getFullName() : "User");
 
-                UserRecord newUser = firebaseAuth.createUser(request);
-                log.info("✅ Utilisateur {} créé sur Firebase Auth (UID: {})", user.getEmail(), newUser.getUid());
+                // Déchiffrer et définir le mot de passe
+                String password = user.getRawPassword();
+                if (password == null && user.getEncryptedPassword() != null) {
+                    try {
+                        password = encryptionUtil.decrypt(user.getEncryptedPassword());
+                        log.info("   🔓 Mot de passe déchiffré depuis la base pour {}", user.getEmail());
+                    } catch (Exception decryptErr) {
+                        log.error("   ❌ Impossible de déchiffrer le mot de passe pour {}", user.getEmail());
+                    }
+                }
+                if (password != null && !password.isEmpty()) {
+                    request.setPassword(password);
+                    log.info("   🔑 Mot de passe défini pour {}", user.getEmail());
+                } else {
+                    log.warn("   ⚠️ Aucun mot de passe disponible pour {} - Firebase Auth sans mot de passe", user.getEmail());
+                }
 
-                // Sauvegarder l'UID Firebase pour référence
-                if (user.getFirestoreId() == null) {
-                    user.setFirestoreId(newUser.getUid());
+                // Ajouter le téléphone uniquement s'il est valide
+                String phone = user.getPhone();
+                if (phone != null && !phone.trim().isEmpty() && isValidPhoneNumber(phone)) {
+                    request.setPhoneNumber(phone);
+                    log.info("   📱 Téléphone défini: {}", phone);
+                } else if (phone != null && !phone.trim().isEmpty()) {
+                    log.warn("   ⚠️ Numéro de téléphone invalide ignoré: {}", phone);
+                }
+
+                try {
+                    UserRecord newUser = firebaseAuth.createUser(request);
+                    log.info("✅ Utilisateur {} créé sur Firebase Auth (UID: {})", user.getEmail(), newUser.getUid());
+
+                    // Sauvegarder le UID Firebase Auth
+                    user.setFirebaseUid(newUser.getUid());
+                    log.info("   🔗 Firebase UID sauvegardé: {}", newUser.getUid());
+                } catch (FirebaseAuthException createError) {
+                    log.error("❌ Erreur création Firebase Auth pour {}: {} - Détail: {}", 
+                            user.getEmail(), 
+                            createError.getErrorCode(), 
+                            createError.getMessage());
+                    throw createError;
                 }
             } else {
                 // Autre erreur
+                log.error("❌ Erreur Firebase Auth - Code: {} - Message: {}", 
+                        e.getErrorCode(), 
+                        e.getMessage());
                 throw e;
             }
         }
+    }
+
+    /**
+     * Valide un numéro de téléphone pour Firebase Auth
+     * Firebase accepte les numéros au format E164: +33123456789
+     */
+    private boolean isValidPhoneNumber(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return false;
+        }
+        
+        phone = phone.trim();
+        
+        // Doit commencer par + et contenir 7-15 chiffres
+        if (!phone.startsWith("+")) {
+            log.warn("   ⚠️ Téléphone doit commencer par +: {}", phone);
+            return false;
+        }
+        
+        // Vérifier qu'il contient seulement + et des chiffres
+        String phoneDigits = phone.substring(1);
+        if (!phoneDigits.matches("\\d{7,15}")) {
+            log.warn("   ⚠️ Téléphone invalide (doit avoir 7-15 chiffres): {}", phone);
+            return false;
+        }
+        
+        return true;
     }
 
     /**
@@ -717,6 +797,7 @@ public class SyncService {
         data.put("createdAt", formatDate(user.getCreatedAt()));
         data.put("updatedAt", formatDate(user.getUpdatedAt()));
         data.put("firestoreId", user.getFirestoreId());
+        data.put("firebaseUid", user.getFirebaseUid());
         data.put("syncStatus", user.getSyncStatus() != null ? user.getSyncStatus() : "PENDING");
         return data;
     }

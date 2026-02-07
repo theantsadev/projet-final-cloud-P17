@@ -3,6 +3,7 @@ package com.idp.config;
 import com.idp.entity.Role;
 import com.idp.repository.RoleRepository;
 import com.idp.service.UserService;
+import com.idp.service.StatutAvancementSignalementService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class Initializer implements ApplicationRunner {
 
     private final RoleRepository roleRepository;
     private final UserService userService;
+    private final StatutAvancementSignalementService statutService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -31,6 +33,13 @@ public class Initializer implements ApplicationRunner {
         // Créer le manager par défaut s'il n'existe pas
         log.info("Création du gestionnaire par défaut...");
         userService.createManagerIfNotExists();
+
+        // Créer les statuts d'avancement par défaut s'ils n'existent pas
+        log.info("Initialisation des statuts d'avancement...");
+        createStatutIfNotExists("NOUVEAU", 0);
+        createStatutIfNotExists("EN_COURS", 50);
+        createStatutIfNotExists("TERMINE", 100);
+        log.info("✅ Initialisation des statuts complétée");
     }
 
     private void createRoleIfNotExists(String nom, String description) {
@@ -42,6 +51,17 @@ public class Initializer implements ApplicationRunner {
             log.info("✅ Rôle créé: {}", nom);
         } else {
             log.info("✓ Rôle existe déjà: {}", nom);
+        }
+    }
+
+    private void createStatutIfNotExists(String statut, Integer avancement) {
+        try {
+            statutService.getByStatut(statut);
+            log.info("✓ Statut existe déjà: {}", statut);
+        } catch (Exception e) {
+            // Statut n'existe pas, le créer
+            statutService.create(statut, avancement);
+            log.info("✅ Statut créé: {} (avancement: {}%)", statut, avancement);
         }
     }
 }

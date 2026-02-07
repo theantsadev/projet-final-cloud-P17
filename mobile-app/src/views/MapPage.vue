@@ -10,6 +10,9 @@
           <ion-button @click="refreshSignalements">
             <ion-icon :icon="refreshOutline"></ion-icon>
           </ion-button>
+          <ion-button @click="handleLogout" color="danger">
+            <ion-icon :icon="logOutOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -37,12 +40,12 @@
               <span class="recap-label">Terminés</span>
             </div>
           </div>
-          
+
           <!-- Statistiques détaillées -->
           <div class="recap-stats-row">
             <div class="recap-stat">
               <span class="stat-label">Surface totale</span>
-              <span class="stat-value">{{ (recap.totalSurfaceM2 || 0).toFixed(1) }} m²</span>
+              <span class="stat-value">{{ recap.totalSurfaceM2 }} m²</span>
             </div>
             <div class="recap-stat">
               <span class="stat-label">Budget total</span>
@@ -60,18 +63,10 @@
       <div class="card-header" style="padding: 16px; background: white; border-bottom: 1px solid #e5e7eb;">
         <div class="controls-row">
           <div class="btn-group">
-            <ion-button 
-              @click="filter = 'tous'"
-              :fill="filter === 'tous' ? 'solid' : 'outline'"
-              size="small"
-            >
+            <ion-button @click="filter = 'tous'" :fill="filter === 'tous' ? 'solid' : 'outline'" size="small">
               Tous
             </ion-button>
-            <ion-button 
-              @click="filter = 'mes'"
-              :fill="filter === 'mes' ? 'solid' : 'outline'"
-              size="small"
-            >
+            <ion-button @click="filter = 'mes'" :fill="filter === 'mes' ? 'solid' : 'outline'" size="small">
               Mes signalements
             </ion-button>
           </div>
@@ -115,30 +110,18 @@
           <!-- Titre -->
           <ion-item>
             <ion-label position="stacked">Titre *</ion-label>
-            <ion-input 
-              v-model="newSignalement.titre" 
-              placeholder="Décrire le problème..."
-              required
-            ></ion-input>
+            <ion-input v-model="newSignalement.titre" placeholder="Décrire le problème..." required></ion-input>
           </ion-item>
 
           <!-- Description -->
           <ion-item>
             <ion-label position="stacked">Description</ion-label>
-            <ion-textarea 
-              v-model="newSignalement.description" 
-              placeholder="Détails supplémentaires..."
-              :rows="3"
-            ></ion-textarea>
+            <ion-textarea v-model="newSignalement.description" placeholder="Détails supplémentaires..."
+              :rows="3"></ion-textarea>
           </ion-item>
 
           <!-- Bouton soumettre -->
-          <ion-button 
-            expand="block" 
-            type="submit" 
-            class="ion-margin-top"
-            :disabled="!isFormValid || isLoading"
-          >
+          <ion-button expand="block" type="submit" class="ion-margin-top" :disabled="!isFormValid || isLoading">
             <ion-spinner v-if="isLoading" name="crescent"></ion-spinner>
             <span v-else>Envoyer le signalement</span>
           </ion-button>
@@ -182,12 +165,12 @@
           <ion-item lines="none">
             <ion-icon :icon="calendarOutline" slot="start" color="primary"></ion-icon>
             <ion-label>
-              <p>{{ formatDate(selectedSignalement.created_at) }}</p>
+              <p>{{ formatDate(selectedSignalement.createdAt) }}</p>
             </ion-label>
           </ion-item>
-          <ion-item lines="none" v-if="selectedSignalement.surface_m2">
+          <ion-item lines="none" v-if="selectedSignalement.surfaceM2">
             <ion-label>
-              <p>Surface: {{ selectedSignalement.surface_m2 }} m²</p>
+              <p>Surface: {{ selectedSignalement.surfaceM2 }} m²</p>
             </ion-label>
           </ion-item>
           <ion-item lines="none" v-if="selectedSignalement.budget">
@@ -200,13 +183,8 @@
     </ion-modal>
 
     <!-- Toast -->
-    <ion-toast
-      :is-open="showToast"
-      :message="toastMessage"
-      :color="toastColor"
-      :duration="3000"
-      @didDismiss="showToast = false"
-    ></ion-toast>
+    <ion-toast :is-open="showToast" :message="toastMessage" :color="toastColor" :duration="3000"
+      @didDismiss="showToast = false"></ion-toast>
   </ion-page>
 </template>
 
@@ -220,18 +198,26 @@ import {
 } from '@ionic/vue'
 import {
   refreshOutline, addOutline, closeOutline, locationOutline,
-  calendarOutline, arrowBackOutline
+  calendarOutline, arrowBackOutline, logOutOutline
 } from 'ionicons/icons'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSignalementStore } from '@/stores/signalementStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
 import { statutColors } from '@/types/firestore.types'
 import type { Signalement } from '@/types/firestore.types'
 import firestoreSignalementService from '@/services/firestoreSignalementService'
 
 const signalementStore = useSignalementStore()
 const authStore = useAuthStore()
+const router = useRouter()
+
+// Déconnexion
+const handleLogout = async () => {
+  await authStore.logout()
+  router.replace('/login')
+}
 
 // Map
 const mapContainer = ref<HTMLElement | null>(null)
@@ -326,7 +312,7 @@ const initMap = () => {
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (isAddingMode.value) {
       const { lat, lng } = e.latlng
-      
+
       // Remove old temp marker
       if (tempMarker) {
         tempMarker.removeFrom(map!)
@@ -358,7 +344,7 @@ const loadMarkers = () => {
 
   displayedSignalements.value.forEach((sig, index) => {
     const color = getMarkerColor(sig.statut?.statut || 'NOUVEAU')
-    
+
     const marker = L.marker([sig.latitude, sig.longitude], {
       icon: L.divIcon({
         className: 'custom-marker',
@@ -454,7 +440,7 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
-  
+
   // Initialize map after a small delay to ensure container is mounted
   setTimeout(() => {
     initMap()
@@ -529,9 +515,17 @@ watch(() => filter.value, () => {
   margin-top: 4px;
 }
 
-.text-primary { color: var(--ion-color-primary); }
-.text-warning { color: var(--ion-color-warning); }
-.text-success { color: var(--ion-color-success); }
+.text-primary {
+  color: var(--ion-color-primary);
+}
+
+.text-warning {
+  color: var(--ion-color-warning);
+}
+
+.text-success {
+  color: var(--ion-color-success);
+}
 
 .card-header {
   display: flex;

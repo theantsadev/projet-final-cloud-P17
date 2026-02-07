@@ -18,19 +18,19 @@ export interface StatutAvancementSignalement {
 export interface User {
   id: string                      // ID unique (UUID)
   email: string                   // Email unique
-  password_hash?: string          // Hash du mot de passe (géré par Firebase Auth)
-  full_name: string               // Nom complet
+  passwordHash?: string           // Hash du mot de passe (géré par Firebase Auth)
+  fullName: string                // Nom complet
   phone?: string                  // Téléphone
   role?: string                   // Role ID (relation ManyToOne)
-  is_active: boolean              // Compte actif
-  is_locked: boolean              // Compte bloqué après 3 tentatives
-  failed_login_attempts: number   // Nombre de tentatives échouées
-  last_failed_login?: Date        // Date dernière tentative échouée
-  last_login?: Date               // Date dernière connexion réussie
-  created_at: Date                // Date de création
-  updated_at: Date                // Date de dernière modification
-  firestore_id?: string           // ID Firestore (référence unique)
-  sync_status: 'PENDING' | 'SYNCED' | 'FAILED'  // Statut de synchronisation
+  isActive: boolean               // Compte actif
+  isLocked: boolean               // Compte bloqué après 3 tentatives
+  failedLoginAttempts: number     // Nombre de tentatives échouées
+  lastFailedLogin?: Date          // Date dernière tentative échouée
+  lastLogin?: Date                // Date dernière connexion réussie
+  createdAt: Date                 // Date de création
+  updatedAt: Date                 // Date de dernière modification
+  firestoreId?: string            // ID Firestore (référence unique)
+  syncStatus: 'PENDING' | 'SYNCED' | 'FAILED'  // Statut de synchronisation
 }
 
 /**
@@ -41,20 +41,20 @@ export interface Signalement {
   id: string                      // ID unique (UUID)
   titre: string                   // Titre du signalement (max 500 caractères)
   description?: string            // Description détaillée (TEXT)
-  statut_id: string               // ID du statut d'avancement (FK vers statut_avancement_signalement)
+  statutId: string                // ID du statut d'avancement (FK vers statut_avancement_signalement)
   statut?: StatutAvancementSignalement  // Relation avec statut complet (optionnel à la lecture)
   latitude: number                // Latitude GPS (obligatoire)
   longitude: number               // Longitude GPS (obligatoire)
-  surface_m2?: number             // Surface en m² (BigDecimal)
+  surfaceM2?: number              // Surface en m² (BigDecimal)
   budget?: number                 // Budget estimé (BigDecimal)
-  entreprise_concernee?: string   // Entreprise concernée (max 255 caractères)
-  user_id: string                 // ID utilisateur créateur (FK vers users)
+  entrepriseConcernee?: string    // Entreprise concernée (max 255 caractères)
+  userId: string                  // ID utilisateur créateur (FK vers users)
   signaleur?: User                // Relation avec utilisateur (optionnel à la lecture)
-  firebase_id?: string            // ID Firebase (référence)
-  is_synchronized: boolean        // Statut de synchronisation avec PostgreSQL
-  last_synced_at?: Date           // Date de dernière synchronisation
-  created_at: Date                // Date de création (auto)
-  updated_at: Date                // Date de modification (auto)
+  firebaseId?: string             // ID Firebase (référence)
+  isSynchronized: boolean         // Statut de synchronisation avec PostgreSQL
+  lastSyncedAt?: Date             // Date de dernière synchronisation
+  createdAt: Date                 // Date de création (auto)
+  updatedAt: Date                 // Date de modification (auto)
 }
 
 /**
@@ -63,17 +63,17 @@ export interface Signalement {
  */
 export interface UserSession {
   id: string                      // ID unique
-  user_id: string                 // ID utilisateur (FK vers users)
-  session_token: string           // Token de session
-  refresh_token?: string          // Token de rafraîchissement
-  ip_address?: string             // Adresse IP
-  user_agent?: string             // User agent
-  is_active: boolean              // Session active
+  userId: string                  // ID utilisateur (FK vers users)
+  sessionToken: string            // Token de session
+  refreshToken?: string           // Token de rafraîchissement
+  ipAddress?: string              // Adresse IP
+  userAgent?: string              // User agent
+  isActive: boolean               // Session active
   expires_at: Date                // Date d'expiration
-  created_at: Date                // Date de création
-  last_activity_at?: Date         // Dernière activité
-  firestore_id?: string           // ID Firestore
-  sync_status: 'PENDING' | 'SYNCED' | 'FAILED'
+  createdAt: Date                 // Date de création
+  lastActivityAt?: Date           // Dernière activité
+  firestoreId?: string            // ID Firestore
+  syncStatus: 'PENDING' | 'SYNCED' | 'FAILED'
 }
 
 /**
@@ -82,15 +82,15 @@ export interface UserSession {
  */
 export interface LoginAttempt {
   id: string                      // ID unique
-  user_id?: string                // ID utilisateur (nullable)
+  userId?: string                 // ID utilisateur (nullable)
   email: string                   // Email de la tentative
-  ip_address?: string             // Adresse IP
-  user_agent?: string             // User agent
-  is_successful: boolean          // Tentative réussie
-  failure_reason?: string         // Raison de l'échec
-  attempted_at: Date              // Date de la tentative
-  firestore_id?: string           // ID Firestore
-  sync_status: 'PENDING' | 'SYNCED' | 'FAILED'
+  ipAddress?: string              // Adresse IP
+  userAgent?: string              // User agent
+  isSuccessful: boolean           // Tentative réussie
+  failureReason?: string          // Raison de l'échec
+  attemptedAt: Date               // Date de la tentative
+  firestoreId?: string            // ID Firestore
+  syncStatus: 'PENDING' | 'SYNCED' | 'FAILED'
 }
 
 /**
@@ -102,9 +102,9 @@ export interface SecuritySetting {
   key: string                     // Clé du paramètre (unique)
   value: string                   // Valeur du paramètre
   description?: string            // Description
-  updated_at: Date                // Date de modification
-  firestore_id?: string           // ID Firestore
-  sync_status: 'PENDING' | 'SYNCED' | 'FAILED'
+  updatedAt: Date                 // Date de modification
+  firestoreId?: string            // ID Firestore
+  syncStatus: 'PENDING' | 'SYNCED' | 'FAILED'
 }
 
 // Requêtes pour l'API/Services
@@ -114,10 +114,10 @@ export interface SignalementCreateRequest {
   description?: string
   latitude: number
   longitude: number
-  surface_m2?: number
+  surfaceM2?: number
   budget?: number
-  entreprise_concernee?: string
-  statut_id?: string              // ID du statut (défaut: NOUVEAU)
+  entrepriseConcernee?: string
+  statutId?: string               // ID du statut (défaut: NOUVEAU)
 }
 
 export interface SignalementUpdateRequest {
@@ -125,20 +125,20 @@ export interface SignalementUpdateRequest {
   description?: string
   latitude?: number
   longitude?: number
-  surface_m2?: number
+  surfaceM2?: number
   budget?: number
-  entreprise_concernee?: string
-  statut_id?: string
+  entrepriseConcernee?: string
+  statutId?: string
 }
 
 export interface SignalementUpdateStatusRequest {
-  statut_id: string               // ID du nouveau statut
+  statutId: string                // ID du nouveau statut
 }
 
 export interface RegisterRequest {
   email: string
   password: string
-  full_name: string
+  fullName: string
   phone?: string
 }
 
