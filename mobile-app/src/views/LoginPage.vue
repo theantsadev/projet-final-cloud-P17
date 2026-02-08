@@ -1,22 +1,19 @@
 <template>
   <ion-page>
     <ion-header>
-      <ion-toolbar color="primary">
-        <ion-title>Signalement Routier</ion-title>
-      </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
       <div class="login-container">
-        <!-- Logo / Titre -->
-        <div class="logo-section">
+        <!-- Logo / Titre (Intro Animation) -->
+        <div class="logo-section" v-if="showIntro">
           <ion-icon :icon="carOutline" class="logo-icon"></ion-icon>
-          <h1>Antananarivo</h1>
+          <h1>{{ displayedTitle }}<span class="cursor">|</span></h1>
           <p>Application de signalement routier</p>
         </div>
 
         <!-- Formulaire de connexion / inscription -->
-        <ion-card>
+        <ion-card v-else class="fade-in-form">
           <ion-card-header>
             <ion-card-title>{{ isRegisterMode ? 'Inscription' : 'Connexion' }}</ion-card-title>
           </ion-card-header>
@@ -90,14 +87,6 @@
           </ion-card-content>
         </ion-card>
 
-        <!-- Info Firebase -->
-        <ion-card color="light">
-          <ion-card-content>
-            <p><strong>🔥 Firebase Authentication</strong></p>
-            <p>L'authentification est gérée directement par Firebase.</p>
-            <p v-if="!isRegisterMode">Créez un compte pour commencer à signaler les problèmes routiers.</p>
-          </ion-card-content>
-        </ion-card>
       </div>
     </ion-content>
 
@@ -113,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   IonPage,
@@ -139,6 +128,33 @@ import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Intro Animation State
+const showIntro = ref(true)
+const displayedTitle = ref('')
+const fullTitle = 'Antananarivo'
+
+const startTypingAnimation = () => {
+  let i = 0
+  displayedTitle.value = ''
+  
+  const interval = setInterval(() => {
+    displayedTitle.value += fullTitle.charAt(i)
+    i++
+    
+    if (i >= fullTitle.length) {
+      clearInterval(interval)
+      // Attendre 1 seconde avant d'afficher le formulaire
+      setTimeout(() => {
+        showIntro.value = false
+      }, 1000)
+    }
+  }, 150) // Vitesse de frappe (ms)
+}
+
+onMounted(() => {
+  startTypingAnimation()
+})
 
 // Mode
 const isRegisterMode = ref(false)
@@ -303,6 +319,32 @@ ion-label {
   font-size: 0.8rem;
   text-transform: none;
   --box-shadow: none;
+}
+
+/* Animation Styles */
+.cursor {
+  display: inline-block;
+  vertical-align: middle;
+  width: 4px; /* Un peu plus épais */
+  height: 1em;
+  background-color: var(--ion-color-primary);
+  animation: blink 0.7s infinite;
+  margin-left: 5px;
+  box-shadow: 0 0 5px var(--ion-color-primary); /* Effet néon */
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.fade-in-form {
+  animation: fadeInForm 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes fadeInForm {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 </style>
 
