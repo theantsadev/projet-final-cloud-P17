@@ -474,8 +474,11 @@ watch(() => filter.value, () => {
 })
 </script>
 
+
 <style scoped>
 .recap-card {
+  background: var(--neumorphic-bg);
+  padding: 15px;
   margin: 16px;
 }
 
@@ -489,16 +492,22 @@ watch(() => filter.value, () => {
 .recap-item {
   display: flex;
   flex-direction: column;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.05);
 }
 
 .recap-number {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: bold;
+  color: #fff;
 }
 
 .recap-label {
-  font-size: 11px;
-  color: var(--ion-color-medium);
+  font-size: 8px;
+  color: #888;
+  text-transform: uppercase;
 }
 
 .recap-stats-row {
@@ -507,7 +516,7 @@ watch(() => filter.value, () => {
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--ion-color-light);
+  border-top: 1px solid rgba(255,255,255,0.05);
   text-align: center;
 }
 
@@ -517,15 +526,16 @@ watch(() => filter.value, () => {
 }
 
 .stat-label {
-  font-size: 11px;
-  color: var(--ion-color-medium);
+  font-size: 9px;
+  color: #666;
   text-transform: uppercase;
 }
 
 .stat-value {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--ion-color-dark);
+  color: var(--ion-color-primary);
+  text-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
   margin-top: 4px;
 }
 
@@ -538,42 +548,41 @@ watch(() => filter.value, () => {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  background: var(--neumorphic-bg) !important;
+  border-bottom: none !important;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  margin-bottom: 2px;
 }
 
-.controls-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
+.btn-group ion-button {
+  --background: var(--neumorphic-bg);
+  --box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  --border-radius: 10px;
+  color: #888;
+  font-size: 0.8rem;
+  height: 30px;
+  --padding-start: 10px;
+  --padding-end: 10px;
 }
 
-.btn-group {
-  display: flex;
-  gap: 0;
-}
-
-.btn-group ion-button:first-child {
-  border-radius: 4px 0 0 4px;
-}
-
-.btn-group ion-button:last-child {
-  border-radius: 0 4px 4px 0;
+.btn-group ion-button[fill="solid"] {
+  --box-shadow: var(--neumorphic-shadow-inset);
+  color: var(--ion-color-primary);
 }
 
 .map-container {
   width: 100%;
   height: 400px;
   z-index: 1;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
 }
 
 .detail-title {
   font-size: 24px;
   margin: 0 0 16px;
   font-weight: bold;
-}
-
-ion-card {
-  margin: 16px 0;
+  color: #fff;
 }
 </style>
+

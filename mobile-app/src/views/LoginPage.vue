@@ -24,8 +24,8 @@
           <ion-card-content>
             <form @submit.prevent="handleSubmit">
               <!-- Nom complet (inscription uniquement) -->
-              <ion-item v-if="isRegisterMode">
-                <ion-label position="floating">Nom complet</ion-label>
+              <ion-item v-if="isRegisterMode" class="neo-input-item">
+                <ion-label position="stacked">Nom complet</ion-label>
                 <ion-input
                   v-model="fullName"
                   type="text"
@@ -35,8 +35,8 @@
               </ion-item>
 
               <!-- Email -->
-              <ion-item>
-                <ion-label position="floating">Email</ion-label>
+              <ion-item class="neo-input-item">
+                <ion-label position="stacked">Email</ion-label>
                 <ion-input
                   v-model="email"
                   type="email"
@@ -46,8 +46,8 @@
               </ion-item>
 
               <!-- Mot de passe -->
-              <ion-item>
-                <ion-label position="floating">Mot de passe</ion-label>
+              <ion-item class="neo-input-item">
+                <ion-label position="stacked">Mot de passe</ion-label>
                 <ion-input
                   v-model="password"
                   :type="showPassword ? 'text' : 'password'"
@@ -58,6 +58,7 @@
                   fill="clear" 
                   slot="end" 
                   @click="showPassword = !showPassword"
+                  class="eye-icon"
                 >
                   <ion-icon :icon="showPassword ? eyeOffOutline : eyeOutline"></ion-icon>
                 </ion-button>
@@ -180,7 +181,7 @@ const handleSubmit = async () => {
     result = await authStore.register({
       email: email.value,
       password: password.value,
-      fullName: fullName.value
+      full_name: fullName.value
     })
   } else {
     result = await authStore.login({
@@ -206,69 +207,102 @@ const handleSubmit = async () => {
 }
 </script>
 
+
 <style scoped>
 .login-container {
-  max-width: 400px;
-  margin: 0 auto;
-  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 90vh; /* Full height */
+  animation: fadeIn 1s ease-out;
 }
 
 .logo-section {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 40px;
+  position: relative;
 }
 
 .logo-icon {
-  font-size: 64px;
+  font-size: 80px;
   color: var(--ion-color-primary);
-  margin-bottom: 16px;
+  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.6));
+  animation: glow 3s infinite;
 }
 
 .logo-section h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--ion-color-primary);
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-top: 10px;
+  letter-spacing: 3px;
 }
 
 .logo-section p {
-  margin: 8px 0 0;
-  color: var(--ion-color-medium);
-  font-size: 14px;
+  color: var(--ion-color-primary);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 4px;
+  margin-top: 0;
+  opacity: 0.8;
 }
 
 ion-card {
-  margin-bottom: 16px;
-  border-radius: 12px;
+  padding: 20px;
+  background: var(--neumorphic-bg);
+  box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  border-radius: 30px;
 }
 
 ion-card-title {
-  font-size: 20px;
+  color: #fff;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
   text-align: center;
 }
 
-ion-item {
-  margin-bottom: 16px;
-  --border-radius: 8px;
+/* Inputs styling override */
+ion-item.neo-input-item {
+  --padding-start: 15px;
+  --inner-padding-end: 15px;
+  margin-bottom: 25px;
 }
 
-.error-message {
-  font-size: 14px;
-  margin: 8px 0;
-  padding: 8px;
-  border-radius: 4px;
-  background-color: rgba(var(--ion-color-danger-rgb), 0.1);
+ion-label {
+  color: var(--ion-color-primary) !important;
+  font-size: 0.8rem !important;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 8px; /* Spacing for stacked label */
 }
 
+/* Button override */
 .login-button {
-  margin-top: 24px;
-  --border-radius: 8px;
-  height: 48px;
-  font-weight: 600;
+  margin-top: 40px;
+  height: 60px;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  --background: linear-gradient(145deg, #1e1e1e, #151515);
+  --color: var(--ion-color-primary);
+  transition: all 0.3s ease;
 }
 
-.switch-mode {
-  text-align: center;
-  margin-top: 16px;
+.login-button:hover {
+  transform: scale(1.02);
+  --color: #fff;
+  filter: drop-shadow(0 0 5px var(--ion-color-primary));
+}
+
+.switch-mode ion-button {
+  --color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  text-transform: none;
+  --box-shadow: none;
 }
 </style>
+

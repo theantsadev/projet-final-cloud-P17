@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import firebaseAuthService, { type User, type LoginRequest, type RegisterRequest } from '@/services/firebaseAuthService'
+import firebaseAuthService from '@/services/firebaseAuthService'
+import type { User, LoginRequest, RegisterRequest } from '@/types/firestore.types'
 
 export type { User, LoginRequest, RegisterRequest }
 
@@ -13,7 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters
   const isAuthenticated = computed(() => !!user.value)
-  const userFullName = computed(() => user.value?.fullName || '')
+  const userFullName = computed(() => user.value?.full_name || '')
   const userId = computed(() => user.value?.id || null)
 
   // Initialiser l'écoute de l'état d'authentification Firebase
