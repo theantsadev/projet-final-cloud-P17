@@ -1,2 +1,122 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+/* Dark Futuristic Neumorphism Theme */
+:root {
+  /* Colors */
+  --ion-color-primary: #00e5ff;
+  --ion-color-primary-rgb: 0, 229, 255;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+
+  --ion-color-secondary: #00ff9d;
+  --ion-color-secondary-rgb: 0, 255, 157;
+  --ion-color-secondary-contrast: #000000;
+
+  --ion-color-tertiary: #d600ff;
+  --ion-color-tertiary-rgb: 214, 0, 255;
+  --ion-color-tertiary-contrast: #ffffff;
+
+  --ion-color-success: #00ff9d;
+  --ion-color-success-rgb: 0, 255, 157;
+  
+  --ion-color-warning: #ffb800;
+  --ion-color-warning-rgb: 255, 184, 0;
+  
+  --ion-color-danger: #ff2a6d;
+  --ion-color-danger-rgb: 255, 42, 109;
+
+  --ion-color-dark: #121212;
+  --ion-color-dark-rgb: 18, 18, 18;
+  
+  --ion-color-medium: #888888;
+  --ion-color-medium-rgb: 136, 136, 136;
+
+  --ion-color-light: #2c2c2c;
+  --ion-color-light-rgb: 44, 44, 44;
+
+  /* Global Background */
+  --ion-background-color: #1a1a1a;
+  --ion-background-color-rgb: 26, 26, 26;
+  --ion-text-color: #ffffff;
+  --ion-text-color-rgb: 255, 255, 255;
+
+  /* Custom Neumorphic Variables */
+  --neumorphic-bg: #1a1a1a;
+  --neumorphic-shadow-light: -6px -6px 12px rgba(255, 255, 255, 0.05);
+  --neumorphic-shadow-dark: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  --neumorphic-shadow-inset: inset 4px 4px 8px rgba(0,0,0,0.6), inset -4px -4px 8px rgba(255,255,255,0.05);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Global Styles */
+ion-content {
+  --background: var(--neumorphic-bg);
+}
+
+/* Headers */
+ion-toolbar {
+  --background: var(--neumorphic-bg);
+  --color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Cards */
+ion-card {
+  --background: var(--neumorphic-bg);
+  --color: #fff;
+  box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255,255,255,0.02);
+  margin: 20px;
+}
+
+
+/* Inputs */
+ion-item {
+  --background: transparent;
+  --color: #fff;
+  --min-height: 50px;
+}
+
+/* Specific class to apply to Inputs for Neumorphic look */
+.neo-input-item {
+  --background: var(--neumorphic-bg);
+  border-radius: 15px;
+  box-shadow: var(--neumorphic-shadow-inset);
+  margin-bottom: 20px;
+  --border-width: 0; /* Remove bottom border */
+  --inner-padding-end: 10px;
+}
+
+ion-input, ion-textarea {
+  --color: #fff;
+  --placeholder-color: #666;
+}
+
+/* Buttons */
+ion-button {
+  --border-radius: 99px;
+  --box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  --background: var(--neumorphic-bg);
+  --color: var(--ion-color-primary);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 15px 0;
+  overflow: visible;
+}
+
+ion-button::part(native) {
+  background: var(--neumorphic-bg);
+  color: var(--ion-color-primary);
+}
+
+ion-button.button-solid {
+  --background: var(--neumorphic-bg);
+  --color: var(--ion-color-primary);
+}
+
+/* Active State for Buttons */
+ion-button:active {
+  --box-shadow: var(--neumorphic-shadow-inset);
+}
+

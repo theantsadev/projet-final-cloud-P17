@@ -142,11 +142,11 @@
         <h1 class="detail-title">{{ selectedSignalement.titre }}</h1>
 
         <!-- Description -->
-        <ion-card v-if="selectedSignalement.description">
+        <ion-card v-if="selectedSignalement.description" class="description-card">
           <ion-card-header>
             <ion-card-subtitle>Description</ion-card-subtitle>
           </ion-card-header>
-          <ion-card-content>
+          <ion-card-content style="color: #ccc;">
             {{ selectedSignalement.description }}
           </ion-card-content>
         </ion-card>
@@ -398,40 +398,53 @@ onMounted(async () => {
 })
 </script>
 
+
 <style scoped>
 .recap-card {
-  margin: 16px;
+  background: var(--neumorphic-bg);
+  padding: 15px;
+  margin-bottom: 30px;
 }
 
 .recap-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 15px;
   text-align: center;
+  margin-bottom: 20px;
 }
 
 .recap-item {
   display: flex;
   flex-direction: column;
+  padding: 10px 5px;
+  border-radius: 15px;
+  box-shadow: var(--neumorphic-shadow-inset); /* Inset for stats */
+  background: rgba(0,0,0,0.2);
 }
 
 .recap-number {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 5px rgba(255,255,255,0.5);
 }
 
 .recap-label {
-  font-size: 11px;
-  color: var(--ion-color-medium);
+  font-size: 9px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 5px;
 }
 
 .recap-stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--ion-color-light);
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255,255,255,0.05);
   text-align: center;
 }
 
@@ -441,15 +454,15 @@ onMounted(async () => {
 }
 
 .stat-label {
-  font-size: 11px;
-  color: var(--ion-color-medium);
+  font-size: 10px;
+  color: #666;
   text-transform: uppercase;
 }
 
 .stat-value {
   font-size: 14px;
   font-weight: 600;
-  color: var(--ion-color-dark);
+  color: var(--ion-color-primary);
   margin-top: 4px;
 }
 
@@ -457,9 +470,50 @@ onMounted(async () => {
 .text-warning { color: var(--ion-color-warning); }
 .text-success { color: var(--ion-color-success); }
 
-.date-text {
-  font-size: 12px;
-  color: var(--ion-color-medium);
+/* List Styling */
+ion-item-sliding {
+  margin-bottom: 20px;
+}
+
+ion-item {
+  --background: var(--neumorphic-bg);
+  border-radius: 20px;
+  box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  --padding-start: 16px;
+  transition: transform 0.2s;
+  margin: 0 5px;
+}
+
+ion-item:active {
+  transform: scale(0.98);
+}
+
+ion-label h2 {
+  font-weight: 800;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+ion-label p {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+ion-avatar {
+  background: var(--neumorphic-bg);
+  box-shadow: var(--neumorphic-shadow-inset);
+  border-radius: 50%;
+  padding: 25px; /* Large space around icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+}
+
+ion-chip {
+  background: var(--neumorphic-bg);
+  box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  font-weight: bold;
 }
 
 .empty-state {
@@ -467,50 +521,29 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  text-align: center;
+  padding: 60px 20px;
+  background: var(--neumorphic-bg);
+  border-radius: 30px;
+  box-shadow: var(--neumorphic-shadow-inset);
+  margin: 20px;
 }
 
 .empty-icon {
-  font-size: 64px;
-  color: var(--ion-color-medium);
+  font-size: 80px;
+  color: #333;
   margin-bottom: 16px;
-}
-
-.empty-state h3 {
-  margin: 0 0 8px;
-}
-
-.empty-state p {
-  color: var(--ion-color-medium);
-  margin: 0 0 24px;
-}
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px;
-}
-
-.status-badges {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.1));
 }
 
 .detail-title {
-  font-size: 24px;
-  margin: 0 0 16px;
-}
-
-.detail-actions {
-  margin-top: 24px;
-}
-
-ion-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  background: linear-gradient(45deg, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 </style>
+

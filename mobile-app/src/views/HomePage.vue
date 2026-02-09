@@ -185,40 +185,115 @@ const goToProfile = () => {
 }
 </script>
 
+
 <style scoped>
 .home-container {
-  max-width: 600px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  animation: fadeIn 0.8s ease-out;
 }
 
+/* User Card */
 ion-card {
-  margin-bottom: 16px;
-  border-radius: 12px;
+  background: var(--neumorphic-bg);
+  color: #fff;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
 
-ion-list {
-  margin-bottom: 16px;
-  border-radius: 12px;
+ion-card-header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
-ion-item {
-  --border-radius: 8px;
+ion-card-title {
+  color: var(--ion-color-primary) !important;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-.token-info {
-  margin-top: 12px;
-  font-size: 12px;
-  word-break: break-all;
+ion-card-subtitle {
+  color: #888 !important;
+  font-family: monospace;
+}
+
+ion-list-header {
+  font-size: 1.2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #555;
+  letter-spacing: 2px;
+  padding-left: 10px;
+  margin-bottom: 15px;
 }
 
 .token-info code {
-  background: var(--ion-color-light);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  background: #000;
+  color: var(--ion-color-secondary);
+  box-shadow: inset 2px 2px 5px #000;
+  padding: 10px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  display: block;
 }
 
 ion-chip {
-  margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--ion-color-success);
+  color: var(--ion-color-success) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
 }
+
+/* Menu Items as Neumorphic Buttons */
+ion-list {
+  background: transparent;
+}
+
+ion-item {
+  --background: var(--neumorphic-bg);
+  --color: #fff;
+  margin-bottom: 20px;
+  border-radius: 20px;
+  box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  padding: 10px 0;
+}
+
+ion-item:active {
+  box-shadow: var(--neumorphic-shadow-inset);
+  transform: scale(0.98);
+}
+
+ion-item h2 {
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 1.1rem;
+}
+
+ion-item p {
+  color: #888;
+}
+
+/* Icons popping out */
+ion-item ion-icon[slot="start"] {
+  background: var(--neumorphic-bg);
+  padding: 12px;
+  border-radius: 50%;
+  box-shadow: var(--neumorphic-shadow-dark), var(--neumorphic-shadow-light);
+  font-size: 24px;
+}
+
+/* Override icon colors specifically */
+ion-item:nth-child(2) ion-icon[slot="start"] { color: var(--ion-color-warning); }
+ion-item:nth-child(3) ion-icon[slot="start"] { color: var(--ion-color-success); }
+ion-item:nth-child(4) ion-icon[slot="start"] { color: var(--ion-color-primary); }
+ion-item:nth-child(5) ion-icon[slot="start"] { color: var(--ion-color-tertiary); }
+
 </style>
+
