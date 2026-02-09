@@ -213,8 +213,7 @@ public class SignalementService {
             data.put("id", signalement.getId());
             data.put("titre", signalement.getTitre());
             data.put("description", signalement.getDescription());
-            data.put("statut", signalement.getStatut().getStatut());
-            data.put("avancement", signalement.getStatut().getAvancement());
+            data.put("statutId", signalement.getStatut().getId());
             data.put("latitude", signalement.getLatitude());
             data.put("longitude", signalement.getLongitude());
             data.put("surfaceM2", signalement.getSurfaceM2());
@@ -224,7 +223,7 @@ public class SignalementService {
             data.put("updatedAt", signalement.getUpdatedAt());
             // ⭐ IMPORTANT: Ajouter le user_id pour la synchronisation inverse
             if (signalement.getSignaleur() != null) {
-                data.put("user_id", signalement.getSignaleur().getId());
+                data.put("userId", signalement.getSignaleur().getId());
             }
             data.put("synchronized", true);
 
@@ -311,10 +310,10 @@ public class SignalementService {
                         signalement.setEntrepriseConcernee(doc.getString("entrepriseConcernee"));
 
                         // Récupérer et convertir le statut
-                        String statutStr = doc.getString("statut");
+                        String statutId = doc.getString("statutId");
                         StatutAvancementSignalement statut = null;
-                        if (statutStr != null && !statutStr.isEmpty()) {
-                            statut = statutRepository.findByStatut(statutStr).orElse(null);
+                        if (statutId != null && !statutId.isEmpty()) {
+                            statut = statutRepository.findById(statutId).orElse(null);
                         }
                         if (statut == null) {
                             statut = statutRepository.findByStatut("NOUVEAU").orElse(null);
@@ -326,7 +325,7 @@ public class SignalementService {
                         signalement.setStatut(statut);
 
                         // ⭐ IMPORTANT: Récupérer le user_id depuis Firebase et charger l'utilisateur
-                        String userId = doc.getString("user_id");
+                        String userId = doc.getString("userId");
                         if (userId != null && !userId.isEmpty()) {
                             Optional<User> user = userRepository.findById(userId);
                             if (user.isPresent()) {
@@ -337,8 +336,8 @@ public class SignalementService {
                                 return null;
                             }
                         } else {
-                            log.warn("⚠️ Pas de user_id dans le signalement Firebase {}, sync impossible", doc.getId());
-                            // Skip ce signalement s'il n'a pas de user_id
+                            log.warn("⚠️ Pas de userId dans le signalement Firebase {}, sync impossible", doc.getId());
+                            // Skip ce signalement s'il n'a pas de userId
                             return null;
                         }
 

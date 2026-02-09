@@ -4,6 +4,7 @@ import com.idp.entity.Signalement;
 import com.idp.entity.User;
 import com.idp.exception.BusinessException;
 import com.idp.repository.UserRepository;
+import com.idp.util.EncryptionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,7 @@ public class UserService {
     private final com.idp.repository.RoleRepository roleRepository;
     private final SyncService syncService;
     private final PasswordEncoder passwordEncoder;
+    private final EncryptionUtil encryptionUtil;
 
     public User createManagerIfNotExists() {
         String email = "manager@gmail.com";
@@ -38,6 +40,7 @@ public class UserService {
                     .id(UUID.randomUUID().toString())
                     .email(email)
                     .passwordHash(passwordEncoder.encode(password))
+                    .encryptedPassword(encryptionUtil.encrypt(password))
                     .fullName("Manager")
                     .role(role)
                     .isActive(true)
@@ -48,6 +51,8 @@ public class UserService {
                     .build();
 
             User savedManager = userRepository.save(manager);
+            // Conserver le mot de passe en clair pour la sync Firebase Auth
+            savedManager.setRawPassword(password);
             log.info("✅ Gestionnaire créé avec succès: {} (email: {})", savedManager.getId(), email);
             return savedManager;
         });

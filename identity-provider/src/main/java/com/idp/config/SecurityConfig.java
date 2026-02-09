@@ -48,6 +48,7 @@ public class SecurityConfig {
                                                                 "/api/signalements/statut/**", // Public statut endpoint
                                                                 "/api/signalements",
                                                                 "/api/signalements/stats/dashboard", // GET tous les signalements
+                                                                "/api/statuts/sync-firebase/all",
 
                                                                 // Swagger/OpenAPI
                                                                 "/api/swagger-ui/**",
@@ -82,7 +83,7 @@ public class SecurityConfig {
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
                 configuration.setAllowedOrigins(Arrays.asList(
-                                "http://localhost:3000",
+                                "http://localhost:3001",
                                 "http://localhost:8080",
                                 "http://127.0.0.1:8080",
                                 "file://"));

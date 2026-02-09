@@ -39,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
       const result = await firebaseAuthService.login(credentials)
       
       if (result.success && result.user) {
+        console.log('Login successful:', result.user)
         user.value = result.user
         return { success: true, message: result.message }
       } else {

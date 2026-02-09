@@ -1,8 +1,8 @@
 // Service d'authentification Firebase
 // Compatible avec la structure identity-provider
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   updateProfile,
@@ -11,6 +11,25 @@ import {
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { auth, db } from '@/firebase/config'
 import type { User, LoginRequest, RegisterRequest } from '@/types/firestore.types'
+
+
+function toDateSafe(value: any): Date {
+  if (!value) return new Date()
+
+  // Timestamp Firestore
+  if (value instanceof Timestamp) {
+    return value.toDate()
+  }
+
+  // Date JS
+  if (value instanceof Date) {
+    return value
+  }
+
+  // string ou number
+  return new Date(value)
+}
+
 
 class FirebaseAuthService {
   private currentUser: User | null = null
@@ -36,19 +55,19 @@ class FirebaseAuthService {
       if (userDoc.exists()) {
         const data = userDoc.data()
         return {
-          id: uid,
+          id: data.id || uid,
           email: data.email || '',
-          full_name: data.full_name || '',
+          fullName: data.fullName || '',
           phone: data.phone || '',
-          is_active: data.is_active !== false,
-          is_locked: data.is_locked || false,
-          failed_login_attempts: data.failed_login_attempts || 0,
-          last_failed_login: data.last_failed_login?.toDate(),
-          last_login: data.last_login?.toDate(),
-          created_at: data.created_at?.toDate() || new Date(),
-          updated_at: data.updated_at?.toDate() || new Date(),
-          firestore_id: uid,
-          sync_status: 'SYNCED'
+          isActive: data.isActive !== false,
+          isLocked: data.isLocked || false,
+          failedLoginAttempts: data.failedLoginAttempts || 0,
+          lastFailedLogin: toDateSafe(data.lastFailedLogin),
+          lastLogin: toDateSafe(data.lastLogin),
+          createdAt: toDateSafe(data.createdAt),
+          updatedAt: toDateSafe(data.updatedAt),
+          firestoreId: data.firestoreId || uid,
+          syncStatus: 'SYNCED'
         }
       }
       return null
@@ -62,63 +81,63 @@ class FirebaseAuthService {
   async login(credentials: LoginRequest): Promise<{ success: boolean; message: string; user?: User }> {
     try {
       const userCredential = await signInWithEmailAndPassword(
-        auth, 
-        credentials.email, 
+        auth,
+        credentials.email,
         credentials.password
       )
-      
+
       const user = await this.getUserData(userCredential.user.uid)
-      
+
       if (!user) {
         // Créer un profil par défaut si non existant dans Firestore
         const newUser: User = {
           id: userCredential.user.uid,
           email: credentials.email,
-          full_name: userCredential.user.displayName || credentials.email.split('@')[0],
-          is_active: true,
-          is_locked: false,
-          failed_login_attempts: 0,
-          created_at: new Date(),
-          updated_at: new Date(),
-          firestore_id: userCredential.user.uid,
-          sync_status: 'PENDING'
+          fullName: userCredential.user.displayName || credentials.email.split('@')[0],
+          isActive: true,
+          isLocked: false,
+          failedLoginAttempts: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          firestoreId: userCredential.user.uid,
+          syncStatus: 'PENDING'
         }
-        
+
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: newUser.email,
-          full_name: newUser.full_name,
-          is_active: newUser.is_active,
-          is_locked: newUser.is_locked,
-          failed_login_attempts: newUser.failed_login_attempts,
-          created_at: serverTimestamp(),
-          updated_at: serverTimestamp()
+          fullName: newUser.fullName,
+          isActive: newUser.isActive,
+          isLocked: newUser.isLocked,
+          failedLoginAttempts: newUser.failedLoginAttempts,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         })
-        
+
         this.currentUser = newUser
         return { success: true, message: 'Connexion réussie', user: newUser }
       }
 
       // Vérifier le compte - pas bloqué et actif
-      if (user.is_locked) {
-        return { 
-          success: false, 
-          message: 'Compte bloqué après trop de tentatives. Contactez l\'administrateur.' 
+      if (user.isLocked) {
+        return {
+          success: false,
+          message: 'Compte bloqué après trop de tentatives. Contactez l\'administrateur.'
         }
       }
 
-      if (!user.is_active) {
-        return { 
-          success: false, 
-          message: 'Compte désactivé.' 
+      if (!user.isActive) {
+        return {
+          success: false,
+          message: 'Compte désactivé.'
         }
       }
-      
+
       this.currentUser = user
       return { success: true, message: 'Connexion réussie', user }
     } catch (error: any) {
       console.error('Erreur login:', error)
       let message = 'Erreur de connexion'
-      
+
       switch (error.code) {
         case 'auth/invalid-email':
           message = 'Email invalide'
@@ -139,7 +158,7 @@ class FirebaseAuthService {
           message = 'Trop de tentatives. Réessayez plus tard.'
           break
       }
-      
+
       return { success: false, message }
     }
   }
@@ -155,33 +174,33 @@ class FirebaseAuthService {
 
       // Mettre à jour le profil Firebase
       await updateProfile(userCredential.user, {
-        displayName: data.full_name
+        displayName: data.fullName
       })
 
       // Créer le document utilisateur dans Firestore
       const newUser: User = {
         id: userCredential.user.uid,
         email: data.email,
-        full_name: data.full_name,
+        fullName: data.fullName,
         phone: data.phone,
-        is_active: true,
-        is_locked: false,
-        failed_login_attempts: 0,
-        created_at: new Date(),
-        updated_at: new Date(),
-        firestore_id: userCredential.user.uid,
-        sync_status: 'PENDING'
+        isActive: true,
+        isLocked: false,
+        failedLoginAttempts: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        firestoreId: userCredential.user.uid,
+        syncStatus: 'PENDING'
       }
 
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email: newUser.email,
-        full_name: newUser.full_name,
+        fullName: newUser.fullName,
         phone: newUser.phone || '',
-        is_active: true,
-        is_locked: false,
-        failed_login_attempts: 0,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp()
+        isActive: true,
+        isLocked: false,
+        failedLoginAttempts: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       })
 
       this.currentUser = newUser
@@ -239,7 +258,7 @@ class FirebaseAuthService {
 
   // Récupérer l'ID de l'utilisateur actuel
   getCurrentUserId(): string | null {
-    return auth.currentUser?.uid || null
+    return this.currentUser?.id || null
   }
 }
 
