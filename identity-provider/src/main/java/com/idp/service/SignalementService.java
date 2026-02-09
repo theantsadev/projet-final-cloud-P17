@@ -426,6 +426,61 @@ public class SignalementService {
                 .mapToInt(s -> s.getStatut().getAvancement())
                 .average()
                 .orElse(0.0);
+        
+        // Calculer les délais moyens de traitement
+        java.util.List<Double> delaisNouveauEnCours = new java.util.ArrayList<>();
+        java.util.List<Double> delaisEnCoursTermine = new java.util.ArrayList<>();
+        java.util.List<Double> delaisTotal = new java.util.ArrayList<>();
+        
+        for (Signalement signalement : allSignalements) {
+            List<HistoriqueStatutSignalement> historique = historiqueRepository
+                    .findBySignalementIdOrderByDateAsc(signalement.getId());
+            
+            LocalDateTime dateNouveau = null;
+            LocalDateTime dateEnCours = null;
+            LocalDateTime dateTermine = null;
+            
+            for (HistoriqueStatutSignalement h : historique) {
+                String statut = h.getStatutAvancementSignalement().getStatut();
+                if ("NOUVEAU".equals(statut) && dateNouveau == null) {
+                    dateNouveau = h.getDate();
+                } else if ("EN_COURS".equals(statut) && dateEnCours == null) {
+                    dateEnCours = h.getDate();
+                } else if ("TERMINE".equals(statut) && dateTermine == null) {
+                    dateTermine = h.getDate();
+                }
+            }
+            
+            // Si pas d'historique NOUVEAU, utiliser createdAt
+            if (dateNouveau == null) {
+                dateNouveau = signalement.getCreatedAt();
+            }
+            
+            // Calculer délai NOUVEAU -> EN_COURS
+            if (dateNouveau != null && dateEnCours != null) {
+                double delaiJours = java.time.Duration.between(dateNouveau, dateEnCours).toHours() / 24.0;
+                delaisNouveauEnCours.add(delaiJours);
+            }
+            
+            // Calculer délai EN_COURS -> TERMINE
+            if (dateEnCours != null && dateTermine != null) {
+                double delaiJours = java.time.Duration.between(dateEnCours, dateTermine).toHours() / 24.0;
+                delaisEnCoursTermine.add(delaiJours);
+            }
+            
+            // Calculer délai total NOUVEAU -> TERMINE
+            if (dateNouveau != null && dateTermine != null) {
+                double delaiJours = java.time.Duration.between(dateNouveau, dateTermine).toHours() / 24.0;
+                delaisTotal.add(delaiJours);
+            }
+        }
+        
+        Double delaiMoyenNouveauEnCours = delaisNouveauEnCours.isEmpty() ? null :
+                delaisNouveauEnCours.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        Double delaiMoyenEnCoursTermine = delaisEnCoursTermine.isEmpty() ? null :
+                delaisEnCoursTermine.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        Double delaiMoyenTraitementTotal = delaisTotal.isEmpty() ? null :
+                delaisTotal.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
         return com.idp.dto.SignalementStatisticsResponse.builder()
                 .totalSignalements(total)
@@ -436,6 +491,10 @@ public class SignalementService {
                 .totalSurfaceM2(totalSurfaceM2)
                 .totalBudget(totalBudget)
                 .averageAvancement(averageAvancement)
+                .delaiMoyenNouveauEnCours(delaiMoyenNouveauEnCours)
+                .delaiMoyenEnCoursTermine(delaiMoyenEnCoursTermine)
+                .delaiMoyenTraitementTotal(delaiMoyenTraitementTotal)
+                .nombreSignalementsTraites((long) delaisTotal.size())
                 .build();
     }
 
@@ -486,6 +545,30 @@ public class SignalementService {
      * Mapper une entité Signalement vers SignalementResponse
      */
     private SignalementResponse mapToResponse(Signalement signalement) {
+        // Récupérer les dates d'avancement depuis l'historique
+        List<HistoriqueStatutSignalement> historique = historiqueRepository
+                .findBySignalementIdOrderByDateAsc(signalement.getId());
+        
+        LocalDateTime dateNouveau = null;
+        LocalDateTime dateEnCours = null;
+        LocalDateTime dateTermine = null;
+        
+        for (HistoriqueStatutSignalement h : historique) {
+            String statut = h.getStatutAvancementSignalement().getStatut();
+            if ("NOUVEAU".equals(statut) && dateNouveau == null) {
+                dateNouveau = h.getDate();
+            } else if ("EN_COURS".equals(statut) && dateEnCours == null) {
+                dateEnCours = h.getDate();
+            } else if ("TERMINE".equals(statut) && dateTermine == null) {
+                dateTermine = h.getDate();
+            }
+        }
+        
+        // Si pas d'historique NOUVEAU, utiliser createdAt
+        if (dateNouveau == null) {
+            dateNouveau = signalement.getCreatedAt();
+        }
+        
         return SignalementResponse.builder()
                 .id(signalement.getId())
                 .titre(signalement.getTitre())
@@ -504,6 +587,9 @@ public class SignalementService {
                 .lastSyncedAt(signalement.getLastSyncedAt())
                 .createdAt(signalement.getCreatedAt())
                 .updatedAt(signalement.getUpdatedAt())
+                .dateNouveau(dateNouveau)
+                .dateEnCours(dateEnCours)
+                .dateTermine(dateTermine)
                 .build();
     }
 }

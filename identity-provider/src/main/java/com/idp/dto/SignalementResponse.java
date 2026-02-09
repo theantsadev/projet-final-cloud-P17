@@ -31,4 +31,9 @@ public class SignalementResponse {
     private LocalDateTime lastSyncedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Dates d'avancement pour chaque étape
+    private LocalDateTime dateNouveau;      // Date de création (NOUVEAU = 0%)
+    private LocalDateTime dateEnCours;      // Date de passage à EN_COURS (50%)
+    private LocalDateTime dateTermine;      // Date de passage à TERMINE (100%)
 }
