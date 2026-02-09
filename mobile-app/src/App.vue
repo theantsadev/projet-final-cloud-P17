@@ -92,42 +92,70 @@ onMounted(() => {
 })
 </script>
 
+
+<style>
+/* Global Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow {
+  0% { text-shadow: 0 0 5px rgba(0, 229, 255, 0.5); }
+  50% { text-shadow: 0 0 20px rgba(0, 229, 255, 0.8), 0 0 10px rgba(0, 229, 255, 0.5); }
+  100% { text-shadow: 0 0 5px rgba(0, 229, 255, 0.5); }
+}
+
+.scrolling-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.05), transparent 60%);
+  animation: float 20s infinite linear;
+  pointer-events: none;
+  z-index: -1;
+}
+
+h1, h2, h3 {
+  font-family: 'Exo 2', sans-serif !important; /* Futuristic Font if avail, else fallback */
+  letter-spacing: 1px;
+}
+
+ion-menu::part(container) {
+  box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+</style>
+
 <style scoped>
 ion-menu ion-content {
-  --background: var(--ion-item-background, var(--ion-background-color, #fff));
+  --background: var(--neumorphic-bg);
 }
 
 ion-list-header {
-  padding: 20px 16px;
-  border-bottom: 1px solid var(--ion-color-light);
-  margin-bottom: 10px;
+  padding: 30px 20px;
+  background: transparent;
+  color: var(--ion-color-primary);
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
-ion-list-header h2 {
-  margin: 0;
-  font-weight: 600;
-}
-
-ion-list-header p {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--ion-color-medium);
+ion-item {
+  --background: transparent;
+  --color: #ccc;
+  border-radius: 15px;
+  margin: 10px;
 }
 
 ion-item.selected {
-  --background: rgba(var(--ion-color-primary-rgb), 0.1);
   --color: var(--ion-color-primary);
+  box-shadow: var(--neumorphic-shadow-inset);
 }
 
-ion-item.selected ion-icon {
+ion-item ion-icon {
   color: var(--ion-color-primary);
 }
-
-.bottom-menu {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  border-top: 1px solid var(--ion-color-light);
-}
 </style>
+
