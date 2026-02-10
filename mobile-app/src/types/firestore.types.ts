@@ -164,6 +164,55 @@ export interface SignalementRecap {
   averageAvancement: number      // Pourcentage moyen d'avancement
 }
 
+// Labels et configurations
+
+/**
+ * Collection: user_photos
+ * Photos uploadées par les utilisateurs (synchronisation web)
+ */
+export interface UserPhoto {
+  id?: string                     // ID du document Firestore
+  uid: string                     // ID de l'utilisateur propriétaire
+  url: string                     // URL publique Cloudinary
+  path: string                    // Chemin dans Cloudinary (public_id)
+  nom: string                     // Nom du fichier original
+  dateUpload: string              // Date d'upload (ISO string)
+  type: 'profile' | 'signalement' | 'message'  // Type de photo
+  taille: number                  // Taille en bytes
+  signalement_id?: string         // ID du signalement associé (si type = signalement)
+  cloudinary_public_id: string    // Public ID Cloudinary pour transformations
+}
+
+/**
+ * Collection: signalement_photos
+ * Liaison entre signalements et photos
+ */
+export interface SignalementPhoto {
+  id?: string                     // ID du document
+  signalement_id: string          // ID du signalement
+  photo_id: string                // ID de la photo (user_photos)
+  ordre: number                   // Ordre d'affichage (0-4)
+  created_at: Date                // Date d'ajout
+}
+
+/**
+ * Collection: notifications
+ * Notifications envoyées aux utilisateurs lors de mises à jour de signalements
+ */
+export interface FirestoreNotification {
+  id: string                      // ID unique de la notification
+  motif: string                   // Message de la notification
+  history_id?: string             // ID de l'historique de statut associé
+  signalement_id: string          // ID du signalement concerné
+  signalement_titre?: string      // Titre du signalement (pour affichage)
+  user_id: string                 // ID de l'utilisateur destinataire
+  status_id?: string              // ID du nouveau statut
+  status_libelle?: string         // Libellé du statut (NOUVEAU, EN_COURS, etc.)
+  status_avancement?: number      // Pourcentage d'avancement
+  date: string                    // Date de création (ISO string)
+  lu: boolean                     // Si la notification a été lue
+}
+
 export interface ApiResponse<T = any> {
   success: boolean
   message: string

@@ -33,17 +33,22 @@
               :class="{ 'selected': currentRoute === '/signalements' }"
             >
               <ion-icon :icon="listOutline" slot="start"></ion-icon>
-              <ion-label>Signalements</ion-label>
+              <ion-label>Mes signalements</ion-label>
             </ion-item>
 
             <ion-item 
               button 
-              router-link="/home"
-              :class="{ 'selected': currentRoute === '/home' }"
+              router-link="/notifications"
+              :class="{ 'selected': currentRoute === '/notifications' }"
             >
-              <ion-icon :icon="personOutline" slot="start"></ion-icon>
-              <ion-label>Mon Profil</ion-label>
+              <ion-icon :icon="notificationsOutline" slot="start"></ion-icon>
+              <ion-label>Notifications</ion-label>
+              <ion-badge v-if="notificationStore.hasUnread" color="danger" slot="end">
+                {{ notificationStore.unreadCount }}
+              </ion-badge>
             </ion-item>
+
+
           </ion-menu-toggle>
         </ion-list>
 
@@ -64,24 +69,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   IonApp, IonRouterOutlet, IonSplitPane, IonMenu, IonHeader,
   IonToolbar, IonTitle, IonContent, IonList, IonListHeader,
-  IonItem, IonLabel, IonIcon, IonMenuToggle
+  IonItem, IonLabel, IonIcon, IonMenuToggle, IonBadge
 } from '@ionic/vue'
-import { mapOutline, listOutline, personOutline, logOutOutline } from 'ionicons/icons'
+import { mapOutline, listOutline, personOutline, logOutOutline, notificationsOutline } from 'ionicons/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const currentRoute = computed(() => route.path)
 
+// Démarrer/arrêter l'écoute des notifications selon l'authentification
+watch(
+  () => authStore.userId,
+  (newUserId) => {
+    if (newUserId) {
+      console.log('🔔 Démarrage de l\'écoute des notifications pour:', newUserId)
+      notificationStore.startListening(newUserId)
+    } else {
+      console.log('🔕 Arrêt de l\'écoute des notifications')
+      notificationStore.stopListening()
+    }
+  },
+  { immediate: true }
+)
+
 const handleLogout = async () => {
+  notificationStore.reset()
   await authStore.logout()
   router.push('/login')
 }

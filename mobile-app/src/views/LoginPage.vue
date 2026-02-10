@@ -70,20 +70,15 @@
               <ion-button
                 expand="block"
                 type="submit"
-                :disabled="authStore.isLoading"
+                :disabled="isSubmitting"
                 class="login-button"
               >
-                <ion-spinner v-if="authStore.isLoading" name="crescent"></ion-spinner>
+                <ion-spinner v-if="isSubmitting" name="crescent"></ion-spinner>
                 <span v-else>{{ isRegisterMode ? "S'inscrire" : 'Se connecter' }}</span>
               </ion-button>
             </form>
 
-            <!-- Lien pour changer de mode -->
-            <div class="switch-mode">
-              <ion-button fill="clear" @click="toggleMode">
-                {{ isRegisterMode ? 'Déjà un compte ? Se connecter' : "Pas de compte ? S'inscrire" }}
-              </ion-button>
-            </div>
+
           </ion-card-content>
         </ion-card>
 
@@ -102,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   IonPage,
@@ -134,6 +129,23 @@ const showIntro = ref(true)
 const displayedTitle = ref('')
 const fullTitle = 'Antananarivo'
 
+// Mode
+const isRegisterMode = ref(false)
+
+// Form data
+const email = ref('')
+const password = ref('')
+const fullName = ref('')
+const showPassword = ref(false)
+
+// Toast
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastColor = ref('success')
+
+// Loading state local (pour garder le spinner jusqu'à la navigation)
+const isSubmitting = ref(false)
+
 const startTypingAnimation = () => {
   let i = 0
   displayedTitle.value = ''
@@ -152,28 +164,20 @@ const startTypingAnimation = () => {
   }, 150) // Vitesse de frappe (ms)
 }
 
-onMounted(() => {
-  startTypingAnimation()
-})
-
-// Mode
-const isRegisterMode = ref(false)
-
-// Form data
-const email = ref('')
-const password = ref('')
-const fullName = ref('')
-const showPassword = ref(false)
-
-// Toast
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastColor = ref('success')
-
-const toggleMode = () => {
-  isRegisterMode.value = !isRegisterMode.value
+const resetForm = () => {
+  email.value = ''
+  password.value = ''
+  fullName.value = ''
+  showPassword.value = false
+  isRegisterMode.value = false
+  isSubmitting.value = false
   authStore.clearError()
 }
+
+onMounted(() => {
+  resetForm()
+  startTypingAnimation()
+})
 
 const handleSubmit = async () => {
   if (!email.value || !password.value) {
@@ -190,33 +194,40 @@ const handleSubmit = async () => {
     return
   }
 
+  isSubmitting.value = true
   authStore.clearError()
 
   let result
-  if (isRegisterMode.value) {
-    result = await authStore.register({
-      email: email.value,
-      password: password.value,
-      full_name: fullName.value
-    })
-  } else {
-    result = await authStore.login({
-      email: email.value,
-      password: password.value
-    })
-  }
+  try {
+    if (isRegisterMode.value) {
+      result = await authStore.register({
+        email: email.value,
+        password: password.value,
+        fullName: fullName.value
+      })
+    } else {
+      result = await authStore.login({
+        email: email.value,
+        password: password.value
+      })
+    }
 
-  if (result.success) {
-    toastMessage.value = isRegisterMode.value ? 'Inscription réussie !' : 'Connexion réussie !'
-    toastColor.value = 'success'
-    showToast.value = true
+    if (result.success) {
+      toastMessage.value = isRegisterMode.value ? 'Inscription réussie !' : 'Connexion réussie !'
+      toastColor.value = 'success'
+      showToast.value = true
 
-    // Rediriger vers la carte après connexion
-    setTimeout(() => {
-      router.push('/map')
-    }, 1000)
-  } else {
-    toastMessage.value = result.message
+      // Rediriger vers la carte - le spinner reste actif jusqu'à la navigation
+      await router.push('/map')
+    } else {
+      toastMessage.value = result.message
+      toastColor.value = 'danger'
+      showToast.value = true
+      isSubmitting.value = false
+    }
+  } catch (error) {
+    isSubmitting.value = false
+    toastMessage.value = 'Erreur inattendue'
     toastColor.value = 'danger'
     showToast.value = true
   }
