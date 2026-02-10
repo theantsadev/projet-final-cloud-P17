@@ -23,7 +23,7 @@ function VisitorDashboard() {
       // Load signalements and statistics in parallel
       const [signalements, statsData] = await Promise.all([
         signalementAPI.getAll(),
-        signalementAPI.getStatistics()
+        signalementAPI.getRecap()
       ])
 
       // Backend returns ApiResponse with data field: { success: true, data: [...], message: "..." }

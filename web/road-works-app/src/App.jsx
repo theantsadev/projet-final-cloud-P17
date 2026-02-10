@@ -12,6 +12,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 // Dashboard Views
 import VisitorDashboard from './pages/dashboards/VisitorDashboard'
 import ManagerDashboard from './pages/dashboards/ManagerDashboard'
+import DelaiMoyenTraitementPage from './pages/dashboards/DelaiMoyenTraitementPage'
 
 // Details Views
 import SignalementDetailsPage from './pages/SignalementDetailsPage'
@@ -79,6 +80,7 @@ function App() {
       }>
         <Route index element={<ManagerDashboard />} />
         <Route path="signalements/:id" element={<SignalementDetailsPage />} />
+        <Route path="delai-moyen-traitement" element={<DelaiMoyenTraitementPage />} />
       </Route>
 
       {/* Default redirects */}

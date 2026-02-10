@@ -73,8 +73,8 @@ export const signalementAPI = {
   update: (id, data) => api.put(`/signalements/${id}`, data),
   updateStatus: (id, statut) => api.patch(`/signalements/${id}/statut?statut=${statut}`),
   delete: (id) => api.delete(`/signalements/${id}`),
-  getStatistics: () => api.get('/signalements/stats/dashboard'),
-  // Sync endpoints
+  getRecap: () => api.get('/signalements/stats/recap'),
+  getDelaiMoyenTraitement: () => api.get('/signalements/stats/delai-moyen-traitement'),
   syncPushAll: () => api.post('/signalements/sync/push-all'),
   syncPullAll: () => api.post('/signalements/sync/pull-all'),
   // Test endpoints
