@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { signalementAPI } from '../services/api'
+import { signalementAPI, typeReparationAPI } from '../services/api'
 import '../styles/SignalementDetailsPage.css'
 
 function SignalementDetailsPage() {
@@ -9,6 +9,9 @@ function SignalementDetailsPage() {
     const [signalement, setSignalement] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [typesReparation, setTypesReparation] = useState([])
+    const [selectedTypeId, setSelectedTypeId] = useState('')
+    const [calculatedBudget, setCalculatedBudget] = useState(null)
     const [formData, setFormData] = useState({
         titre: '',
         description: '',
@@ -24,7 +27,29 @@ function SignalementDetailsPage() {
 
     useEffect(() => {
         loadSignalement()
+        loadTypesReparation()
     }, [id])
+
+    const loadTypesReparation = async () => {
+        try {
+            const response = await typeReparationAPI.getActive()
+            setTypesReparation(response.data?.data || [])
+        } catch (err) {
+            console.error('Erreur chargement types de réparation:', err)
+        }
+    }
+
+    // Calculer le budget automatiquement quand la surface ou le type change
+    useEffect(() => {
+        if (selectedTypeId && formData.surfaceM2) {
+            const selectedType = typesReparation.find(t => t.id === selectedTypeId)
+            if (selectedType) {
+                const budget = parseFloat(formData.surfaceM2) * parseFloat(selectedType.prixM2)
+                setCalculatedBudget(budget)
+                setFormData(prev => ({ ...prev, budget: budget }))
+            }
+        }
+    }, [selectedTypeId, formData.surfaceM2, typesReparation])
 
     const loadSignalement = async () => {
         try {
@@ -42,6 +67,10 @@ function SignalementDetailsPage() {
                 entrepriseConcernee: data.entrepriseConcernee || '',
                 pourcentageAvancement: data.pourcentageAvancement || 0
             })
+            // Si un type de réparation est déjà assigné
+            if (data.typeReparation?.id) {
+                setSelectedTypeId(data.typeReparation.id)
+            }
         } catch (err) {
             setError('Erreur lors du chargement du signalement')
             console.error(err)
@@ -76,7 +105,14 @@ function SignalementDetailsPage() {
             setError('')
             setSuccess('')
 
+            // 1. Mettre à jour le signalement
             await signalementAPI.update(id, formData)
+
+            // 2. Affecter le type de réparation si sélectionné (calcule aussi le budget)
+            if (selectedTypeId) {
+                await typeReparationAPI.assignToSignalement(id, selectedTypeId)
+            }
+
             setSuccess('Signalement mis à jour avec succès')
 
             setTimeout(() => {
@@ -233,6 +269,42 @@ function SignalementDetailsPage() {
                                     step="10000"
                                     className="form-control"
                                 />
+                            </div>
+                        </div>
+
+                        {/* Type de Réparation et Budget Calculé */}
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label htmlFor="typeReparation">Type de Réparation</label>
+                                <select
+                                    id="typeReparation"
+                                    name="typeReparation"
+                                    value={selectedTypeId}
+                                    onChange={(e) => setSelectedTypeId(e.target.value)}
+                                    className="form-control"
+                                >
+                                    <option value="">-- Sélectionner un type --</option>
+                                    {typesReparation.map(type => (
+                                        <option key={type.id} value={type.id}>
+                                            {type.nom} (Niveau {type.niveau} - {type.prixM2?.toLocaleString()} Ar/m²)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Budget Calculé (Ar)</label>
+                                <div className="calculated-budget">
+                                    {calculatedBudget !== null ? (
+                                        <span className="budget-value">
+                                            {calculatedBudget.toLocaleString()} Ar
+                                        </span>
+                                    ) : (
+                                        <span className="budget-placeholder">
+                                            Sélectionnez un type et une surface
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

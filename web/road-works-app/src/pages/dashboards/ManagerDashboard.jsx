@@ -429,6 +429,46 @@ function ManagerDashboard() {
             </button>
           </div>
 
+          {/* Quick Actions */}
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/manager/type-reparations')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.3s'
+              }}
+            >
+              🔧 Gérer les Types de Réparation
+            </button>
+            <button
+              onClick={() => navigate('/manager/delai-moyen-traitement')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.3s'
+              }}
+            >
+              📊 Délai Moyen de Traitement
+            </button>
+          </div>
+
           {/* Main Content */}
           <div className="dashboard-grid">
             {/* Chart & Quick Stats */}

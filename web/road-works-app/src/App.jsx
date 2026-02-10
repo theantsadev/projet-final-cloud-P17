@@ -22,6 +22,9 @@ import PhotosPage from './pages/PhotosPage'
 // Delai Moyen View
 import DelaiMoyenTraitementPage from './pages/dashboards/DelaiMoyenTraitementPage'
 
+// Type Reparation View
+import TypeReparationsPage from './pages/dashboards/TypeReparationsPage'
+
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, token } = useAuthStore()
@@ -87,6 +90,7 @@ function App() {
         <Route path="signalements/:id" element={<SignalementDetailsPage />} />
         <Route path="photos" element={<PhotosPage />} />
         <Route path="delai-moyen-traitement" element={<DelaiMoyenTraitementPage />} />
+        <Route path="type-reparations" element={<TypeReparationsPage />} />
       </Route>
 
       {/* Default redirects */}

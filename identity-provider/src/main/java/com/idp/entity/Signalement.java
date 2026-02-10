@@ -46,6 +46,14 @@ public class Signalement {
     @Column(name = "budget")
     private BigDecimal budget;
 
+    /**
+     * Type de réparation affecté par le manager
+     * Permet de calculer le budget automatiquement (budget = surfaceM2 * prixM2)
+     */
+    @ManyToOne
+    @JoinColumn(name = "type_reparation_id")
+    private TypeReparation typeReparation;
+
     @Column(name = "entreprise_concernee", length = 255)
     private String entrepriseConcernee;
 

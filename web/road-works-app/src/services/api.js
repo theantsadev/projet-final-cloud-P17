@@ -100,3 +100,21 @@ export const usersAPI = {
   testSyncPush: () => api.post('/users/test/sync-firebase-push'),
   testSyncPull: () => api.post('/users/test/sync-firebase-pull')
 }
+
+// Types de Réparation API
+export const typeReparationAPI = {
+  // CRUD
+  getAll: () => api.get('/type-reparations'),
+  getActive: () => api.get('/type-reparations/active'),
+  getById: (id) => api.get(`/type-reparations/${id}`),
+  create: (data) => api.post('/type-reparations', data),
+  update: (id, data) => api.put(`/type-reparations/${id}`, data),
+  delete: (id) => api.delete(`/type-reparations/${id}`),
+  // Affectation et calcul de budget
+  assignToSignalement: (signalementId, typeReparationId) => 
+    api.post('/type-reparations/assign', { signalementId, typeReparationId }),
+  recalculateBudget: (signalementId) => 
+    api.post(`/type-reparations/recalculate-budget/${signalementId}`),
+  calculateBudget: (surfaceM2, prixM2) => 
+    api.get(`/type-reparations/calculate-budget?surfaceM2=${surfaceM2}&prixM2=${prixM2}`)
+}
