@@ -35,6 +35,7 @@ public class SignalementService {
     private final UserRepository userRepository;
     private final StatutAvancementSignalementRepository statutRepository;
     private final HistoriqueStatutSignalementRepository historiqueRepository;
+    private final NotificationService notificationService;
     private final Firestore firestore;
     private static final String COLLECTION_NAME = "signalements";
 
@@ -164,7 +165,17 @@ public class SignalementService {
         signalement = signalementRepository.save(signalement);
 
         // Enregistrer l'historique du changement de statut
-        enregistrerHistoriqueStatut(signalement, statut, LocalDateTime.now());
+        HistoriqueStatutSignalement historique = enregistrerHistoriqueStatut(signalement, statut, LocalDateTime.now());
+
+        // Créer une notification pour l'utilisateur propriétaire du signalement
+        if (historique != null && signalement.getSignaleur() != null) {
+            String motif = "Votre signalement \"" + signalement.getTitre() + 
+                          "\" a été mis à jour: " + statut.getStatut() + 
+                          " (" + statut.getAvancement() + "%)";
+            notificationService.createNotificationForStatusChange(signalement, historique, statut, motif);
+            log.info("📢 Notification créée pour l'utilisateur {} suite au changement de statut du signalement {}", 
+                    signalement.getSignaleur().getId(), signalement.getId());
+        }
 
         // Synchroniser vers Firebase
         synchronizeToFirebase(signalement);
@@ -537,7 +548,7 @@ public class SignalementService {
     /**
      * Enregistrer un changement de statut dans l'historique
      */
-    private void enregistrerHistoriqueStatut(Signalement signalement, StatutAvancementSignalement statut,
+    private HistoriqueStatutSignalement enregistrerHistoriqueStatut(Signalement signalement, StatutAvancementSignalement statut,
             LocalDateTime date) {
         try {
             HistoriqueStatutSignalement historique = HistoriqueStatutSignalement.builder()
@@ -546,11 +557,13 @@ public class SignalementService {
                     .date(date)
                     .build();
 
-            historiqueRepository.save(historique);
+            historique = historiqueRepository.save(historique);
             log.info("Historique enregistré pour le signalement {}: statut {}", signalement.getId(),
                     statut.getStatut());
+            return historique;
         } catch (Exception e) {
             log.error("Erreur lors de l'enregistrement de l'historique du statut", e);
+            return null;
         }
     }
 

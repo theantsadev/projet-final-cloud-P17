@@ -88,16 +88,25 @@ function MainLayout() {
                   </span>
                   <span className="nav-link-text">Administration</span>
                 </NavLink>
-
+                <NavLink
+                  to="/manager/photos"
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <span className="nav-link-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  </span>
+                  <span className="nav-link-text">Photos</span>
+                </NavLink>
                 <NavLink
                   to="/manager/delai-moyen-traitement"
                   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <span className="nav-link-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   </span>
-                  <span className="nav-link-text">Délais Traitement</span>
+                  <span className="nav-link-text">Délai Moyen de Traitement</span>
                 </NavLink>
               </>
             )}
