@@ -21,7 +21,18 @@ public class SignalementResponse {
     private Double latitude;
     private Double longitude;
     private BigDecimal surfaceM2;
+    /**
+     * Niveau de gravité (1-10)
+     */
+    private Integer niveau;
+    /**
+     * Budget calculé: prix_m2_global × niveau × surface_m2
+     */
     private BigDecimal budget;
+    /**
+     * Prix global au m² utilisé pour le calcul du budget
+     */
+    private BigDecimal prixM2Global;
     private String entrepriseConcernee;
     private Integer pourcentageAvancement;
     private String signaleurId;

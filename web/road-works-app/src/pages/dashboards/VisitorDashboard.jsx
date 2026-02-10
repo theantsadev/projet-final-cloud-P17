@@ -294,7 +294,7 @@ function VisitorDashboard() {
                   </div>
                   <div className="stat-content">
                     <div className="stat-label">Budget Total</div>
-                    <div className="stat-value">{(stats.totalBudget / 1000000).toFixed(1)}M Ar</div>
+                    <div className="stat-value">{(stats.totalBudget).toFixed(1)} Ar</div>
                     <div className="stat-change">Investissement total</div>
                   </div>
                 </div>

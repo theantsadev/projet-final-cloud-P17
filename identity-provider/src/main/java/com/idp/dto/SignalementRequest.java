@@ -35,8 +35,13 @@ public class SignalementRequest {
     @DecimalMin("0")
     private BigDecimal surfaceM2;
     
-    @DecimalMin("0")
-    private BigDecimal budget;
+    /**
+     * Niveau de gravité (1-10)
+     * Utilisé pour calculer le budget: prix_m2_global × niveau × surface_m2
+     */
+    @Min(value = 1, message = "Le niveau doit être au minimum 1")
+    @Max(value = 10, message = "Le niveau doit être au maximum 10")
+    private Integer niveau;
     
     @Size(max = 255)
     private String entrepriseConcernee;

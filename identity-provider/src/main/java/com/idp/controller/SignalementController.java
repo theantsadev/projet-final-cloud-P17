@@ -51,7 +51,7 @@ public class SignalementController {
                 .latitude(Double.parseDouble(payload.getOrDefault("latitude", "-18.8792").toString()))
                 .longitude(Double.parseDouble(payload.getOrDefault("longitude", "47.5079").toString()))
                 .surfaceM2(new java.math.BigDecimal(payload.getOrDefault("surfaceM2", "25.5").toString()))
-                .budget(new java.math.BigDecimal(payload.getOrDefault("budget", "5000000").toString()))
+                .niveau(Integer.parseInt(payload.getOrDefault("niveau", "5").toString()))
                 .entrepriseConcernee((String) payload.getOrDefault("entrepriseConcernee", "Test Constructo"))
                 .pourcentageAvancement(Integer.parseInt(payload.getOrDefault("pourcentageAvancement", "0").toString()))
                 .build();
@@ -79,7 +79,7 @@ public class SignalementController {
                 .latitude(-18.8792)
                 .longitude(47.5079)
                 .surfaceM2(new java.math.BigDecimal("25.5"))
-                .budget(new java.math.BigDecimal("5000000"))
+                .niveau(5)
                 .entrepriseConcernee("Test Constructo")
                 .pourcentageAvancement(0)
                 .build();

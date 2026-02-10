@@ -13,12 +13,14 @@ import com.idp.repository.HistoriqueStatutSignalementRepository;
 import com.idp.repository.SignalementRepository;
 import com.idp.repository.StatutAvancementSignalementRepository;
 import com.idp.repository.UserRepository;
+import com.idp.repository.GlobalConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +39,28 @@ public class SignalementService {
     private final HistoriqueStatutSignalementRepository historiqueRepository;
     private final NotificationService notificationService;
     private final Firestore firestore;
+    private final GlobalConfigRepository globalConfigRepository;
     private static final String COLLECTION_NAME = "signalements";
+
+    /**
+     * Récupérer le prix global au m² depuis la configuration
+     */
+    private BigDecimal getPrixM2Global() {
+        return globalConfigRepository.findByConfigKey(com.idp.entity.GlobalConfig.PRIX_M2_GLOBAL_KEY)
+                .map(com.idp.entity.GlobalConfig::getValueAsBigDecimal)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Calculer le budget dynamiquement: prix_m2_global × niveau × surface_m2
+     */
+    private BigDecimal calculerBudget(BigDecimal surfaceM2, Integer niveau) {
+        if (surfaceM2 == null || niveau == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal prixM2Global = getPrixM2Global();
+        return prixM2Global.multiply(new BigDecimal(niveau)).multiply(surfaceM2);
+    }
 
     /**
      * Créer un nouveau signalement
@@ -60,7 +83,7 @@ public class SignalementService {
                     .latitude(request.getLatitude())
                     .longitude(request.getLongitude())
                     .surfaceM2(request.getSurfaceM2())
-                    .budget(request.getBudget())
+                    .niveau(request.getNiveau())
                     .entrepriseConcernee(request.getEntrepriseConcernee())
                     .statut(statutNouveauOpt)
                     .isSynchronized(false)
@@ -137,7 +160,7 @@ public class SignalementService {
         signalement.setLatitude(request.getLatitude());
         signalement.setLongitude(request.getLongitude());
         signalement.setSurfaceM2(request.getSurfaceM2());
-        signalement.setBudget(request.getBudget());
+        signalement.setNiveau(request.getNiveau());
         signalement.setEntrepriseConcernee(request.getEntrepriseConcernee());
 
         signalement.setIsSynchronized(false);
@@ -169,11 +192,11 @@ public class SignalementService {
 
         // Créer une notification pour l'utilisateur propriétaire du signalement
         if (historique != null && signalement.getSignaleur() != null) {
-            String motif = "Votre signalement \"" + signalement.getTitre() + 
-                          "\" a été mis à jour: " + statut.getStatut() + 
-                          " (" + statut.getAvancement() + "%)";
+            String motif = "Votre signalement \"" + signalement.getTitre() +
+                    "\" a été mis à jour: " + statut.getStatut() +
+                    " (" + statut.getAvancement() + "%)";
             notificationService.createNotificationForStatusChange(signalement, historique, statut, motif);
-            log.info("📢 Notification créée pour l'utilisateur {} suite au changement de statut du signalement {}", 
+            log.info("📢 Notification créée pour l'utilisateur {} suite au changement de statut du signalement {}",
                     signalement.getSignaleur().getId(), signalement.getId());
         }
 
@@ -454,9 +477,14 @@ public class SignalementService {
                 .filter(java.util.Objects::nonNull)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
+        // Calcul dynamique du budget total: prix_m2_global × niveau × surface_m2
+        BigDecimal prixM2Global = globalConfigRepository.findByConfigKey(com.idp.entity.GlobalConfig.PRIX_M2_GLOBAL_KEY)
+                .map(com.idp.entity.GlobalConfig::getValueAsBigDecimal)
+                .orElse(BigDecimal.ZERO);
+
         java.math.BigDecimal totalBudget = allSignalements.stream()
-                .map(Signalement::getBudget)
-                .filter(java.util.Objects::nonNull)
+                .filter(s -> s.getSurfaceM2() != null && s.getNiveau() != null)
+                .map(s -> prixM2Global.multiply(new BigDecimal(s.getNiveau())).multiply(s.getSurfaceM2()))
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         Double averageAvancement = allSignalements.stream()
@@ -548,7 +576,8 @@ public class SignalementService {
     /**
      * Enregistrer un changement de statut dans l'historique
      */
-    private HistoriqueStatutSignalement enregistrerHistoriqueStatut(Signalement signalement, StatutAvancementSignalement statut,
+    private HistoriqueStatutSignalement enregistrerHistoriqueStatut(Signalement signalement,
+            StatutAvancementSignalement statut,
             LocalDateTime date) {
         try {
             HistoriqueStatutSignalement historique = HistoriqueStatutSignalement.builder()
@@ -618,6 +647,18 @@ public class SignalementService {
             dateNouveau = signalement.getCreatedAt();
         }
 
+        // Calcul dynamique du budget: prix_m2_global × niveau × surface_m2
+        BigDecimal prixM2Global = globalConfigRepository.findByConfigKey(com.idp.entity.GlobalConfig.PRIX_M2_GLOBAL_KEY)
+                .map(com.idp.entity.GlobalConfig::getValueAsBigDecimal)
+                .orElse(BigDecimal.ZERO);
+
+        BigDecimal budgetCalcule = BigDecimal.ZERO;
+        if (signalement.getSurfaceM2() != null && signalement.getNiveau() != null) {
+            budgetCalcule = prixM2Global
+                    .multiply(new BigDecimal(signalement.getNiveau()))
+                    .multiply(signalement.getSurfaceM2());
+        }
+
         return SignalementResponse.builder()
                 .id(signalement.getId())
                 .titre(signalement.getTitre())
@@ -626,7 +667,9 @@ public class SignalementService {
                 .latitude(signalement.getLatitude())
                 .longitude(signalement.getLongitude())
                 .surfaceM2(signalement.getSurfaceM2())
-                .budget(signalement.getBudget())
+                .niveau(signalement.getNiveau())
+                .budget(budgetCalcule)
+                .prixM2Global(prixM2Global)
                 .entrepriseConcernee(signalement.getEntrepriseConcernee())
                 .pourcentageAvancement(signalement.getStatut().getAvancement())
                 .signaleurId(signalement.getSignaleur() != null ? signalement.getSignaleur().getId() : null)

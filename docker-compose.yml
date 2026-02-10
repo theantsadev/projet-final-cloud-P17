@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17
+    container_name: p17-postgres
+    environment:
+      POSTGRES_DB: authdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d authdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - p17-network
+
+  # Identity Provider (Spring Boot API)
+  identity-provider:
+    build:
+      context: ./identity-provider
+      dockerfile: Dockerfile
+    container_name: p17-identity-provider
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/authdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8081
+      FIREBASE_CREDENTIALS_PATH: classpath:firebase-service-account.json
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - p17-network
+    restart: unless-stopped
+
+  # Web Frontend (React/Vite)
+  web:
+    build:
+      context: ./web/road-works-app
+      dockerfile: Dockerfile
+    container_name: p17-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - identity-provider
+    networks:
+      - p17-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  p17-network:
+    driver: bridge
