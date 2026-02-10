@@ -309,6 +309,10 @@ public class SignalementService {
 
                         signalement.setEntrepriseConcernee(doc.getString("entrepriseConcernee"));
 
+                        // Récupérer les timestamps
+                        signalement.setCreatedAt(convertToLocalDateTime(doc.get("createdAt")));
+                        signalement.setUpdatedAt(convertToLocalDateTime(doc.get("updatedAt")));
+
                         // Récupérer et convertir le statut
                         String statutId = doc.getString("statutId");
                         StatutAvancementSignalement statut = null;
@@ -401,9 +405,31 @@ public class SignalementService {
     }
 
     /**
-     * Obtenir les statistiques des signalements
+     * Convertir un objet Firebase Timestamp en LocalDateTime de manière sûre
      */
-    public com.idp.dto.SignalementStatisticsResponse getStatistics() {
+    private LocalDateTime convertToLocalDateTime(Object value) {
+        if (value == null) {
+            return LocalDateTime.now();
+        }
+
+        if (value instanceof com.google.cloud.Timestamp) {
+            com.google.cloud.Timestamp timestamp = (com.google.cloud.Timestamp) value;
+            return timestamp.toDate().toInstant()
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime();
+        } else if (value instanceof java.util.Date) {
+            return ((java.util.Date) value).toInstant()
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime();
+        }
+        // Fallback: retourner le timestamp actuel si la conversion échoue
+        return LocalDateTime.now();
+    }
+
+    /**
+     * Obtenir le récapitulatif des statistiques des signalements
+     */
+    public com.idp.dto.SignalementRecapResponse getRecap() {
         List<Signalement> allSignalements = signalementRepository.findAll();
 
         long total = allSignalements.size();
@@ -426,20 +452,38 @@ public class SignalementService {
                 .mapToInt(s -> s.getStatut().getAvancement())
                 .average()
                 .orElse(0.0);
-        
+
+        return com.idp.dto.SignalementRecapResponse.builder()
+                .totalSignalements(total)
+                .signalementNouveaux(nouveaux)
+                .signalementEnCours(enCours)
+                .signalementTermines(termines)
+                .signalementAnnules(annules)
+                .totalSurfaceM2(totalSurfaceM2)
+                .totalBudget(totalBudget)
+                .averageAvancement(averageAvancement)
+                .build();
+    }
+
+    /**
+     * Obtenir les délais moyens de traitement
+     */
+    public com.idp.dto.DelaiMoyenTraitementResponse getDelaiMoyenTraitement() {
+        List<Signalement> allSignalements = signalementRepository.findAll();
+
         // Calculer les délais moyens de traitement
         java.util.List<Double> delaisNouveauEnCours = new java.util.ArrayList<>();
         java.util.List<Double> delaisEnCoursTermine = new java.util.ArrayList<>();
         java.util.List<Double> delaisTotal = new java.util.ArrayList<>();
-        
+
         for (Signalement signalement : allSignalements) {
             List<HistoriqueStatutSignalement> historique = historiqueRepository
                     .findBySignalementIdOrderByDateAsc(signalement.getId());
-            
+
             LocalDateTime dateNouveau = null;
             LocalDateTime dateEnCours = null;
             LocalDateTime dateTermine = null;
-            
+
             for (HistoriqueStatutSignalement h : historique) {
                 String statut = h.getStatutAvancementSignalement().getStatut();
                 if ("NOUVEAU".equals(statut) && dateNouveau == null) {
@@ -450,47 +494,39 @@ public class SignalementService {
                     dateTermine = h.getDate();
                 }
             }
-            
+
             // Si pas d'historique NOUVEAU, utiliser createdAt
             if (dateNouveau == null) {
                 dateNouveau = signalement.getCreatedAt();
             }
-            
+
             // Calculer délai NOUVEAU -> EN_COURS
             if (dateNouveau != null && dateEnCours != null) {
                 double delaiJours = java.time.Duration.between(dateNouveau, dateEnCours).toHours() / 24.0;
                 delaisNouveauEnCours.add(delaiJours);
             }
-            
+
             // Calculer délai EN_COURS -> TERMINE
             if (dateEnCours != null && dateTermine != null) {
                 double delaiJours = java.time.Duration.between(dateEnCours, dateTermine).toHours() / 24.0;
                 delaisEnCoursTermine.add(delaiJours);
             }
-            
+
             // Calculer délai total NOUVEAU -> TERMINE
             if (dateNouveau != null && dateTermine != null) {
                 double delaiJours = java.time.Duration.between(dateNouveau, dateTermine).toHours() / 24.0;
                 delaisTotal.add(delaiJours);
             }
         }
-        
-        Double delaiMoyenNouveauEnCours = delaisNouveauEnCours.isEmpty() ? null :
-                delaisNouveauEnCours.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        Double delaiMoyenEnCoursTermine = delaisEnCoursTermine.isEmpty() ? null :
-                delaisEnCoursTermine.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        Double delaiMoyenTraitementTotal = delaisTotal.isEmpty() ? null :
-                delaisTotal.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
-        return com.idp.dto.SignalementStatisticsResponse.builder()
-                .totalSignalements(total)
-                .signalementNouveaux(nouveaux)
-                .signalementEnCours(enCours)
-                .signalementTermines(termines)
-                .signalementAnnules(annules)
-                .totalSurfaceM2(totalSurfaceM2)
-                .totalBudget(totalBudget)
-                .averageAvancement(averageAvancement)
+        Double delaiMoyenNouveauEnCours = delaisNouveauEnCours.isEmpty() ? null
+                : delaisNouveauEnCours.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        Double delaiMoyenEnCoursTermine = delaisEnCoursTermine.isEmpty() ? null
+                : delaisEnCoursTermine.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        Double delaiMoyenTraitementTotal = delaisTotal.isEmpty() ? null
+                : delaisTotal.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+
+        return com.idp.dto.DelaiMoyenTraitementResponse.builder()
                 .delaiMoyenNouveauEnCours(delaiMoyenNouveauEnCours)
                 .delaiMoyenEnCoursTermine(delaiMoyenEnCoursTermine)
                 .delaiMoyenTraitementTotal(delaiMoyenTraitementTotal)
@@ -548,11 +584,11 @@ public class SignalementService {
         // Récupérer les dates d'avancement depuis l'historique
         List<HistoriqueStatutSignalement> historique = historiqueRepository
                 .findBySignalementIdOrderByDateAsc(signalement.getId());
-        
+
         LocalDateTime dateNouveau = null;
         LocalDateTime dateEnCours = null;
         LocalDateTime dateTermine = null;
-        
+
         for (HistoriqueStatutSignalement h : historique) {
             String statut = h.getStatutAvancementSignalement().getStatut();
             if ("NOUVEAU".equals(statut) && dateNouveau == null) {
@@ -563,12 +599,12 @@ public class SignalementService {
                 dateTermine = h.getDate();
             }
         }
-        
+
         // Si pas d'historique NOUVEAU, utiliser createdAt
         if (dateNouveau == null) {
             dateNouveau = signalement.getCreatedAt();
         }
-        
+
         return SignalementResponse.builder()
                 .id(signalement.getId())
                 .titre(signalement.getTitre())

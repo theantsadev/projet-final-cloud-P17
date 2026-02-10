@@ -42,13 +42,14 @@ public class SecurityConfig {
                                                                 "/api/security/**", // Paramètres sécurité
                                                                 "/api/sync/**", // Synchronisation
                                                                 "/api/signalements/test/**", // TEST endpoints
-                                                                 "/api/users/test/sync-firebase-push",
+                                                                "/api/users/test/sync-firebase-push",
                                                                                              // signalement
                                                                 "/api/signalements/geo/**", // PostGIS endpoints
                                                                 "/api/signalements/statut/**", // Public statut endpoint
                                                                 "/api/signalements",
-                                                                "/api/signalements/stats/dashboard", // GET tous les signalements
+                                                                "/api/signalements/stats/recap", // GET tous les signalements
                                                                 "/api/statuts/sync-firebase/all",
+
 
                                                                 // Swagger/OpenAPI
                                                                 "/api/swagger-ui/**",

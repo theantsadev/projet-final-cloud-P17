@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SignalementStatisticsResponse {
+public class SignalementRecapResponse {
 
     private Long totalSignalements;
     private Long signalementNouveaux;
@@ -21,10 +21,4 @@ public class SignalementStatisticsResponse {
     private BigDecimal totalSurfaceM2;
     private BigDecimal totalBudget;
     private Double averageAvancement; // Pourcentage moyen d'avancement
-    
-    // Statistiques de délai de traitement
-    private Double delaiMoyenNouveauEnCours;      // Délai moyen (en jours) de NOUVEAU à EN_COURS
-    private Double delaiMoyenEnCoursTermine;      // Délai moyen (en jours) de EN_COURS à TERMINE
-    private Double delaiMoyenTraitementTotal;     // Délai moyen total (en jours) de NOUVEAU à TERMINE
-    private Long nombreSignalementsTraites;       // Nombre de signalements terminés (pour le calcul)
 }
