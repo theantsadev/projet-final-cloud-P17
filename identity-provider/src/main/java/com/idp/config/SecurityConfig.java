@@ -49,17 +49,16 @@ public class SecurityConfig {
                                                                 "/api/signalements",
                                                                 "/api/signalements/stats/recap", // GET tous les signalements
                                                                 "/api/statuts/sync-firebase/all",
-
-
-                                                                // Swagger/OpenAPI
-                                                                "/api/swagger-ui/**",
-                                                                "/api/swagger-ui.html",
-                                                                "/api/api-docs/**",
-                                                                "/api/v3/api-docs/**",
-                                                                "/swagger-ui/**",
+                                                "/api/types-reparation/**", // Types de réparation (public)
+                                                
+                                                // Swagger/OpenAPI - SpringDoc
+                                                "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/api-docs/**",
                                                                 "/v3/api-docs/**",
+                                                "/swagger-resources/**",
+                                                "/configuration/**",
+                                                "/webjars/**",
 
                                                                 // Fichiers statiques et HTML
                                                                 "/index.html",

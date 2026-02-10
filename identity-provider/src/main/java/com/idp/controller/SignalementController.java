@@ -326,4 +326,53 @@ public class SignalementController {
                 signalements,
                 "✅ " + signalements.size() + " signalements récupérés"));
     }
+
+    // ============================================================
+    // ENDPOINTS TYPE REPARATION / AFFECTATION
+    // ============================================================
+
+    /**
+     * Affecter un type de réparation à un signalement
+     * Le budget est recalculé automatiquement: budget = coutUnitaire * surfaceM2
+     */
+    @PatchMapping("/{id}/type-reparation")
+    public ResponseEntity<ApiResponse<?>> affecterTypeReparation(
+            @PathVariable String id,
+            @RequestParam String typeReparationId,
+            @RequestParam(required = false) Integer niveau) {
+
+        log.info("Affectation du type de réparation {} au signalement {} (niveau: {})", typeReparationId, id, niveau);
+        SignalementResponse response = signalementService.affecterTypeReparation(id, typeReparationId, niveau);
+
+        return ResponseEntity.ok(ApiResponse.success(response,
+                "Type de réparation affecté avec succès. Budget recalculé: " + response.getBudget()));
+    }
+
+    /**
+     * Retirer le type de réparation d'un signalement
+     */
+    @DeleteMapping("/{id}/type-reparation")
+    public ResponseEntity<ApiResponse<?>> retirerTypeReparation(@PathVariable String id) {
+
+        log.info("Retrait du type de réparation du signalement {}", id);
+        SignalementResponse response = signalementService.retirerTypeReparation(id);
+
+        return ResponseEntity.ok(ApiResponse.success(response, "Type de réparation retiré avec succès"));
+    }
+
+    /**
+     * TEST ENDPOINT - Affecter un type de réparation SANS authentification
+     */
+    @PatchMapping("/test/{id}/type-reparation")
+    public ResponseEntity<ApiResponse<?>> testAffecterTypeReparation(
+            @PathVariable String id,
+            @RequestParam String typeReparationId,
+            @RequestParam(required = false) Integer niveau) {
+
+        log.info("TEST: Affectation du type de réparation {} au signalement {}", typeReparationId, id);
+        SignalementResponse response = signalementService.affecterTypeReparation(id, typeReparationId, niveau);
+
+        return ResponseEntity.ok(ApiResponse.success(response,
+                "TEST: Type de réparation affecté. Budget calculé: " + response.getBudget()));
+    }
 }

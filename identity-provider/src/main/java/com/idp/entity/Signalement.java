@@ -1,6 +1,8 @@
 package com.idp.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -48,6 +50,15 @@ public class Signalement {
 
     @Column(name = "entreprise_concernee", length = 255)
     private String entrepriseConcernee;
+
+    @ManyToOne
+    @JoinColumn(name = "type_reparation_id")
+    private TypeReparation typeReparation;
+
+    @Column(name = "niveau")
+    @Min(value = 1, message = "Le niveau doit être au minimum 1")
+    @Max(value = 10, message = "Le niveau doit être au maximum 10")
+    private Integer niveau;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

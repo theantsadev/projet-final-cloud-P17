@@ -7,11 +7,13 @@ import com.idp.dto.SignalementResponse;
 import com.idp.entity.HistoriqueStatutSignalement;
 import com.idp.entity.Signalement;
 import com.idp.entity.StatutAvancementSignalement;
+import com.idp.entity.TypeReparation;
 import com.idp.entity.User;
 import com.idp.exception.BusinessException;
 import com.idp.repository.HistoriqueStatutSignalementRepository;
 import com.idp.repository.SignalementRepository;
 import com.idp.repository.StatutAvancementSignalementRepository;
+import com.idp.repository.TypeReparationRepository;
 import com.idp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,7 @@ public class SignalementService {
     private final UserRepository userRepository;
     private final StatutAvancementSignalementRepository statutRepository;
     private final HistoriqueStatutSignalementRepository historiqueRepository;
+    private final TypeReparationRepository typeReparationRepository;
     private final NotificationService notificationService;
     private final Firestore firestore;
     private static final String COLLECTION_NAME = "signalements";
@@ -591,6 +594,69 @@ public class SignalementService {
     }
 
     /**
+     * Affecter un type de réparation à un signalement
+     * Calcule automatiquement le budget = coutUnitaire * surfaceM2
+     */
+    @Transactional
+    public SignalementResponse affecterTypeReparation(String signalementId, String typeReparationId, Integer niveau) {
+        Signalement signalement = signalementRepository.findById(signalementId)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+
+        TypeReparation typeReparation = typeReparationRepository.findById(typeReparationId)
+                .orElseThrow(() -> new BusinessException("TYPE_REPARATION_NOT_FOUND",
+                        "Type de réparation non trouvé avec l'ID: " + typeReparationId));
+
+        // Valider le niveau (1 ≤ niveau ≤ 10)
+        int niveauFinal = (niveau != null) ? niveau : typeReparation.getNiveau();
+        if (niveauFinal < 1 || niveauFinal > 10) {
+            throw new BusinessException("INVALID_NIVEAU",
+                    "Le niveau doit être compris entre 1 et 10 (reçu: " + niveauFinal + ")");
+        }
+
+        signalement.setTypeReparation(typeReparation);
+        signalement.setNiveau(niveauFinal);
+
+        // Calcul automatique du budget = coutUnitaire * surfaceM2
+        if (typeReparation.getCoutUnitaire() != null && signalement.getSurfaceM2() != null) {
+            java.math.BigDecimal budgetCalcule = typeReparation.getCoutUnitaire()
+                    .multiply(signalement.getSurfaceM2());
+            signalement.setBudget(budgetCalcule);
+            log.info("Budget calculé automatiquement: {} x {} = {}",
+                    typeReparation.getCoutUnitaire(), signalement.getSurfaceM2(), budgetCalcule);
+        }
+
+        signalement.setIsSynchronized(false);
+        signalement = signalementRepository.save(signalement);
+
+        // Synchroniser vers Firebase
+        synchronizeToFirebase(signalement);
+
+        log.info("Type de réparation '{}' affecté au signalement '{}' avec niveau {} - Budget: {}",
+                typeReparation.getNom(), signalement.getTitre(), niveauFinal, signalement.getBudget());
+
+        return mapToResponse(signalement);
+    }
+
+    /**
+     * Retirer le type de réparation d'un signalement
+     */
+    @Transactional
+    public SignalementResponse retirerTypeReparation(String signalementId) {
+        Signalement signalement = signalementRepository.findById(signalementId)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND", "Signalement non trouvé"));
+
+        signalement.setTypeReparation(null);
+        signalement.setNiveau(null);
+        signalement.setIsSynchronized(false);
+        signalement = signalementRepository.save(signalement);
+
+        synchronizeToFirebase(signalement);
+
+        log.info("Type de réparation retiré du signalement '{}'", signalement.getTitre());
+        return mapToResponse(signalement);
+    }
+
+    /**
      * Mapper une entité Signalement vers SignalementResponse
      */
     private SignalementResponse mapToResponse(Signalement signalement) {
@@ -629,6 +695,11 @@ public class SignalementService {
                 .budget(signalement.getBudget())
                 .entrepriseConcernee(signalement.getEntrepriseConcernee())
                 .pourcentageAvancement(signalement.getStatut().getAvancement())
+                .typeReparationId(signalement.getTypeReparation() != null ? signalement.getTypeReparation().getId() : null)
+                .typeReparationNom(signalement.getTypeReparation() != null ? signalement.getTypeReparation().getNom() : null)
+                .coutUnitaire(signalement.getTypeReparation() != null ? signalement.getTypeReparation().getCoutUnitaire() : null)
+                .unite(signalement.getTypeReparation() != null ? signalement.getTypeReparation().getUnite() : null)
+                .niveau(signalement.getNiveau())
                 .signaleurId(signalement.getSignaleur() != null ? signalement.getSignaleur().getId() : null)
                 .signaleurNom(signalement.getSignaleur() != null ? signalement.getSignaleur().getFullName() : null)
                 .firebaseId(signalement.getFirebaseId())

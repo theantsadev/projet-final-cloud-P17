@@ -24,6 +24,11 @@ public class SignalementResponse {
     private BigDecimal budget;
     private String entrepriseConcernee;
     private Integer pourcentageAvancement;
+    private String typeReparationId;
+    private String typeReparationNom;
+    private BigDecimal coutUnitaire;
+    private String unite;
+    private Integer niveau;
     private String signaleurId;
     private String signaleurNom;
     private String firebaseId;
