@@ -5,14 +5,16 @@ import '../../styles/TypeReparationsPage.css'
 
 function TypeReparationsPage() {
     const [types, setTypes] = useState([])
+    const [prixM2Global, setPrixM2Global] = useState(0)
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
+    const [showPrixModal, setShowPrixModal] = useState(false)
     const [editingType, setEditingType] = useState(null)
+    const [newPrixGlobal, setNewPrixGlobal] = useState('')
     const [formData, setFormData] = useState({
         nom: '',
         description: '',
         niveau: 1,
-        prixM2: '',
         isActive: true
     })
 
@@ -24,7 +26,9 @@ function TypeReparationsPage() {
         try {
             setLoading(true)
             const response = await typeReparationAPI.getAll()
-            setTypes(response.data?.data || [])
+            const data = response.data?.data || {}
+            setTypes(data.types || [])
+            setPrixM2Global(data.prixM2Global || 0)
         } catch (error) {
             console.error('Erreur chargement types:', error)
             toast.error('Impossible de charger les types de réparation')
@@ -45,22 +49,13 @@ function TypeReparationsPage() {
             toast.error('Le niveau doit être entre 1 et 10')
             return
         }
-        if (!formData.prixM2 || parseFloat(formData.prixM2) <= 0) {
-            toast.error('Le prix au m² doit être supérieur à 0')
-            return
-        }
 
         try {
-            const data = {
-                ...formData,
-                prixM2: parseFloat(formData.prixM2)
-            }
-
             if (editingType) {
-                await typeReparationAPI.update(editingType.id, data)
+                await typeReparationAPI.update(editingType.id, formData)
                 toast.success('Type de réparation mis à jour')
             } else {
-                await typeReparationAPI.create(data)
+                await typeReparationAPI.create(formData)
                 toast.success('Type de réparation créé')
             }
 
@@ -73,13 +68,32 @@ function TypeReparationsPage() {
         }
     }
 
+    const handleUpdatePrixGlobal = async (e) => {
+        e.preventDefault()
+        
+        const prix = parseFloat(newPrixGlobal)
+        if (!prix || prix <= 0) {
+            toast.error('Le prix doit être supérieur à 0')
+            return
+        }
+
+        try {
+            await typeReparationAPI.setPrixGlobal(prix)
+            toast.success('Prix global mis à jour')
+            setPrixM2Global(prix)
+            setShowPrixModal(false)
+        } catch (error) {
+            console.error('Erreur mise à jour prix:', error)
+            toast.error('Erreur lors de la mise à jour du prix')
+        }
+    }
+
     const handleEdit = (type) => {
         setEditingType(type)
         setFormData({
             nom: type.nom,
             description: type.description || '',
             niveau: type.niveau,
-            prixM2: type.prixM2,
             isActive: type.isActive
         })
         setShowModal(true)
@@ -106,7 +120,6 @@ function TypeReparationsPage() {
             nom: '',
             description: '',
             niveau: 1,
-            prixM2: '',
             isActive: true
         })
     }
@@ -116,10 +129,20 @@ function TypeReparationsPage() {
         setShowModal(true)
     }
 
+    const openPrixModal = () => {
+        setNewPrixGlobal(prixM2Global.toString())
+        setShowPrixModal(true)
+    }
+
     const formatPrice = (price) => {
         return new Intl.NumberFormat('fr-MG', {
             minimumFractionDigits: 0
         }).format(price) + ' Ar'
+    }
+
+    // Calculer le coût par m² en fonction du niveau (prix_global × niveau)
+    const calculateCostPerM2 = (niveau) => {
+        return prixM2Global * niveau
     }
 
     const getNiveauBadgeClass = (niveau) => {
@@ -151,13 +174,31 @@ function TypeReparationsPage() {
             <div className="page-header">
                 <div>
                     <h1>Types de Réparation</h1>
-                    <p>Gérez les types de réparation et leurs tarifs au m²</p>
+                    <p>Gérez les types de réparation et le prix global au m²</p>
                 </div>
                 <button onClick={openCreateModal} className="btn btn-primary">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Nouveau type
+                </button>
+            </div>
+
+            {/* Prix Global Card */}
+            <div className="prix-global-card">
+                <div className="prix-global-info">
+                    <div className="prix-global-icon">
+                        <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>Prix Global au m²</h3>
+                        <p className="prix-global-value">{formatPrice(prixM2Global)}</p>
+                    </div>
+                </div>
+                <button onClick={openPrixModal} className="btn btn-secondary">
+                    Modifier
                 </button>
             </div>
 
@@ -168,7 +209,7 @@ function TypeReparationsPage() {
                 </svg>
                 <div>
                     <h3>Calcul du budget</h3>
-                    <p>Le budget est calculé automatiquement: <strong>Budget = Surface (m²) × Prix au m²</strong></p>
+                    <p>Le budget est calculé automatiquement: <strong>Budget = Prix Global ({formatPrice(prixM2Global)}) × Niveau × Surface (m²)</strong></p>
                 </div>
             </div>
 
@@ -180,7 +221,7 @@ function TypeReparationsPage() {
                             <tr>
                                 <th>Nom</th>
                                 <th>Niveau</th>
-                                <th>Prix / m²</th>
+                                <th>Coût effectif / m²</th>
                                 <th>Statut</th>
                                 <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
@@ -217,7 +258,10 @@ function TypeReparationsPage() {
                                             </div>
                                         </td>
                                         <td>
-                                            <span className="price-value">{formatPrice(type.prixM2)}</span>
+                                            <div className="cost-cell">
+                                                <span className="price-value">{formatPrice(calculateCostPerM2(type.niveau))}</span>
+                                                <span className="cost-formula">({formatPrice(prixM2Global)} × {type.niveau})</span>
+                                            </div>
                                         </td>
                                         <td>
                                             <span className={`badge ${type.isActive ? 'badge-active' : 'badge-inactive'}`}>
@@ -256,7 +300,7 @@ function TypeReparationsPage() {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modal Type */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
@@ -315,24 +359,7 @@ function TypeReparationsPage() {
                                             {formData.niveau} - {getNiveauLabel(formData.niveau)}
                                         </span>
                                     </div>
-                                    <p className="help-text">1 = Mineur, 10 = Critique</p>
-                                </div>
-
-                                {/* Prix au m² */}
-                                <div className="form-group">
-                                    <label>
-                                        Prix au m² (Ar) <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={formData.prixM2}
-                                        onChange={(e) => setFormData({ ...formData, prixM2: e.target.value })}
-                                        className="form-input"
-                                        placeholder="Ex: 50000"
-                                        min="1"
-                                        step="100"
-                                        required
-                                    />
+                                    <p className="help-text">1 = Mineur, 10 = Critique. Coût effectif: {formatPrice(calculateCostPerM2(formData.niveau))}/m²</p>
                                 </div>
 
                                 {/* Statut actif (uniquement en édition) */}
@@ -357,6 +384,58 @@ function TypeReparationsPage() {
                                 </button>
                                 <button type="submit" className="btn btn-primary">
                                     {editingType ? 'Enregistrer' : 'Créer'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Prix Global */}
+            {showPrixModal && (
+                <div className="modal-overlay" onClick={() => setShowPrixModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">Modifier le Prix Global</h2>
+                            <button className="modal-close" onClick={() => setShowPrixModal(false)}>
+                                ×
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdatePrixGlobal}>
+                            <div className="modal-body modal-form">
+                                <div className="form-group">
+                                    <label>
+                                        Prix Global au m² (Ar) <span className="required">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={newPrixGlobal}
+                                        onChange={(e) => setNewPrixGlobal(e.target.value)}
+                                        className="form-input"
+                                        placeholder="Ex: 50000"
+                                    />
+                                    <p className="help-text">
+                                        Ce prix de base est multiplié par le niveau pour calculer le coût effectif par m².
+                                    </p>
+                                </div>
+
+                                <div className="info-card" style={{ marginTop: '1rem' }}>
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    <div>
+                                        <p><strong>Formule:</strong> Budget = Prix Global × Niveau × Surface (m²)</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer">
+                                <button type="button" onClick={() => setShowPrixModal(false)} className="btn btn-secondary">
+                                    Annuler
+                                </button>
+                                <button type="submit" className="btn btn-primary">
+                                    Enregistrer
                                 </button>
                             </div>
                         </form>

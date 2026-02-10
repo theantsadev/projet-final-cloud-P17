@@ -11,13 +11,13 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * Entité représentant un type de réparation routière.
- * Contient le niveau de gravité (1-10) et le prix au m².
- * Le budget est calculé automatiquement: budget = surfaceM2 * prixM2
+ * Sert de référentiel pour catégoriser les signalements par niveau de gravité.
+ * Le prix au m² est défini globalement dans GlobalConfig.
+ * Formule budget: prix_m2_global × niveau × surface_m2
  */
 @Entity
 @Table(name = "type_reparations")
@@ -41,19 +41,13 @@ public class TypeReparation {
 
     /**
      * Niveau de gravité de 1 (mineur) à 10 (critique)
+     * Utilisé comme multiplicateur dans le calcul du budget
      */
     @NotNull(message = "Le niveau est obligatoire")
     @Min(value = 1, message = "Le niveau doit être au minimum 1")
     @Max(value = 10, message = "Le niveau doit être au maximum 10")
     @Column(nullable = false)
     private Integer niveau;
-
-    /**
-     * Prix de réparation par mètre carré en Ariary (MGA)
-     */
-    @NotNull(message = "Le prix au m² est obligatoire")
-    @Column(name = "prix_m2", nullable = false, precision = 15, scale = 2)
-    private BigDecimal prixM2;
 
     @Column(name = "is_active")
     @Builder.Default

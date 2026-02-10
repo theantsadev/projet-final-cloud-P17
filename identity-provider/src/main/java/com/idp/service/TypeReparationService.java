@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * Service métier pour la gestion des types de réparation.
- * Implémente le calcul automatique du budget: budget = surfaceM2 * prixM2
+ * Budget calculé avec la formule: prix_m2_global × niveau × surface_m2
  */
 @Service
 @RequiredArgsConstructor
@@ -24,6 +24,7 @@ public class TypeReparationService {
 
     private final TypeReparationRepository typeReparationRepository;
     private final SignalementRepository signalementRepository;
+    private final GlobalConfigService globalConfigService;
 
     /**
      * Récupérer tous les types de réparation (triés par niveau)
@@ -67,12 +68,6 @@ public class TypeReparationService {
                     "Un type de réparation avec ce nom existe déjà: " + type.getNom());
         }
 
-        // Valider le prix
-        if (type.getPrixM2() == null || type.getPrixM2().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("INVALID_PRICE", 
-                    "Le prix au m² doit être supérieur à 0");
-        }
-
         TypeReparation saved = typeReparationRepository.save(type);
         log.info("✅ Type de réparation créé: {} (niveau {})", saved.getNom(), saved.getNiveau());
         return saved;
@@ -100,15 +95,6 @@ public class TypeReparationService {
                         "Un type de réparation avec ce nom existe déjà: " + updates.getNom());
             }
             existing.setNom(updates.getNom());
-        }
-
-        // Mise à jour du prix
-        if (updates.getPrixM2() != null) {
-            if (updates.getPrixM2().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException("INVALID_PRICE", 
-                        "Le prix au m² doit être supérieur à 0");
-            }
-            existing.setPrixM2(updates.getPrixM2());
         }
 
         // Mise à jour de la description
@@ -151,7 +137,8 @@ public class TypeReparationService {
 
     /**
      * Affecter un type de réparation à un signalement et calculer le budget
-     * Budget = surfaceM2 * prixM2
+     * Le niveau du type est copié sur le signalement
+     * Budget = prix_m2_global × niveau × surface_m2
      */
     @Transactional
     public Signalement assignTypeToSignalement(String signalementId, String typeReparationId) {
@@ -163,30 +150,58 @@ public class TypeReparationService {
 
         TypeReparation typeReparation = getTypeById(typeReparationId);
 
-        // Affecter le type
+        // Affecter le type et copier son niveau
         signalement.setTypeReparation(typeReparation);
+        signalement.setNiveau(typeReparation.getNiveau());
 
         // Calculer le budget automatiquement si la surface est définie
-        BigDecimal calculatedBudget = calculateBudget(signalement.getSurfaceM2(), typeReparation.getPrixM2());
+        BigDecimal calculatedBudget = calculateBudget(signalement.getSurfaceM2(), typeReparation.getNiveau());
         signalement.setBudget(calculatedBudget);
 
         Signalement saved = signalementRepository.save(signalement);
-        log.info("✅ Type {} affecté au signalement {}. Budget calculé: {} MGA",
-                typeReparation.getNom(), signalementId, calculatedBudget);
+        log.info("✅ Type {} affecté au signalement {}. Niveau: {}, Budget calculé: {} MGA",
+                typeReparation.getNom(), signalementId, typeReparation.getNiveau(), calculatedBudget);
+
+        return saved;
+    }
+
+    /**
+     * Définir le niveau d'un signalement et calculer le budget
+     * (sans affecter de type de réparation)
+     */
+    @Transactional
+    public Signalement setNiveauAndCalculateBudget(String signalementId, Integer niveau) {
+        log.info("Définition du niveau {} pour le signalement {}", niveau, signalementId);
+
+        validateNiveau(niveau);
+
+        Signalement signalement = signalementRepository.findById(signalementId)
+                .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND",
+                        "Signalement non trouvé avec l'ID: " + signalementId));
+
+        signalement.setNiveau(niveau);
+
+        // Calculer le budget
+        BigDecimal calculatedBudget = calculateBudget(signalement.getSurfaceM2(), niveau);
+        signalement.setBudget(calculatedBudget);
+
+        Signalement saved = signalementRepository.save(signalement);
+        log.info("✅ Niveau {} défini pour signalement {}. Budget calculé: {} MGA",
+                niveau, signalementId, calculatedBudget);
 
         return saved;
     }
 
     /**
      * Calculer le budget d'un signalement
-     * Formule: budget = surfaceM2 * prixM2
+     * Formule: budget = prix_m2_global × niveau × surface_m2
      */
-    public BigDecimal calculateBudget(BigDecimal surfaceM2, BigDecimal prixM2) {
-        if (surfaceM2 == null || prixM2 == null) {
-            log.warn("Surface ou prix non défini, budget = 0");
+    public BigDecimal calculateBudget(BigDecimal surfaceM2, Integer niveau) {
+        if (surfaceM2 == null || niveau == null) {
+            log.warn("Surface ou niveau non défini, budget = 0");
             return BigDecimal.ZERO;
         }
-        return surfaceM2.multiply(prixM2);
+        return globalConfigService.calculateBudget(surfaceM2, niveau);
     }
 
     /**
@@ -200,20 +215,24 @@ public class TypeReparationService {
                 .orElseThrow(() -> new BusinessException("SIGNALEMENT_NOT_FOUND",
                         "Signalement non trouvé avec l'ID: " + signalementId));
 
-        if (signalement.getTypeReparation() == null) {
-            throw new BusinessException("NO_TYPE_ASSIGNED",
-                    "Aucun type de réparation affecté à ce signalement");
+        if (signalement.getNiveau() == null) {
+            throw new BusinessException("NO_NIVEAU_DEFINED",
+                    "Aucun niveau défini pour ce signalement");
         }
 
-        BigDecimal newBudget = calculateBudget(
-                signalement.getSurfaceM2(),
-                signalement.getTypeReparation().getPrixM2()
-        );
+        BigDecimal newBudget = calculateBudget(signalement.getSurfaceM2(), signalement.getNiveau());
         signalement.setBudget(newBudget);
 
         Signalement saved = signalementRepository.save(signalement);
         log.info("✅ Budget recalculé: {} MGA", newBudget);
         return saved;
+    }
+
+    /**
+     * Récupérer le prix global au m²
+     */
+    public BigDecimal getPrixM2Global() {
+        return globalConfigService.getPrixM2Global();
     }
 
     /**

@@ -27,8 +27,7 @@ INSERT INTO type_reparations (id, nom, description, niveau, prix_m2, is_active) 
     (gen_random_uuid()::VARCHAR, 'Fissure profonde', 'Fissures avec affaissement partiel', 4, 50000.00, TRUE),
     (gen_random_uuid()::VARCHAR, 'Affaissement chaussée', 'Déformation importante de la route', 6, 100000.00, TRUE),
     (gen_random_uuid()::VARCHAR, 'Effondrement partiel', 'Effondrement localisé nécessitant reconstruction', 8, 200000.00, TRUE),
-    (gen_random_uuid()::VARCHAR, 'Destruction totale', 'Route impraticable, reconstruction complète requise', 10, 500000.00, TRUE)
-ON CONFLICT (nom) DO NOTHING;
+    (gen_random_uuid()::VARCHAR, 'Destruction totale', 'Route impraticable, reconstruction complète requise', 10, 500000.00, TRUE);
 
 -- 4. Créer un index pour les recherches par niveau
 CREATE INDEX IF NOT EXISTS idx_type_reparations_niveau ON type_reparations(niveau);

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class SignalementRequest {
     
     @NotBlank(message = "Le titre est requis")
-    @Size(min = 5, max = 500, message = "Le titre doit contenir entre 5 et 500 caractères")
+    @Size(max = 500, message = "Le titre ne doit pas dépasser 500 caractères")
     private String titre;
     
     @Size(max = 5000, message = "La description ne doit pas dépasser 5000 caractères")
