@@ -5,23 +5,7 @@
         <ion-buttons slot="start">
           <ion-menu-button></ion-menu-button>
         </ion-buttons>
-        <ion-title>Signalements</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="refreshSignalements">
-            <ion-icon :icon="refreshOutline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-      <!-- Segment pour filtrer -->
-      <ion-toolbar>
-        <ion-segment v-model="filter" @ionChange="onFilterChange">
-          <ion-segment-button value="tous">
-            <ion-label>Tous</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="mes">
-            <ion-label>Mes signalements</ion-label>
-          </ion-segment-button>
-        </ion-segment>
+        <ion-title>Mes signalements</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -53,7 +37,7 @@
           <div class="recap-stats-row">
             <div class="recap-stat">
               <span class="stat-label">Surface totale</span>
-              <span class="stat-value">{{ (recap.totalSurfaceM2 || 0).toFixed(1) }} m²</span>
+              <span class="stat-value">{{ (recap.totalSurfaceM2 || 0) }} m²</span>
             </div>
             <div class="recap-stat">
               <span class="stat-label">Budget total</span>
@@ -71,7 +55,7 @@
       <ion-list v-if="displayedSignalements.length > 0">
         <ion-item-sliding v-for="sig in displayedSignalements" :key="sig.id">
           <ion-item button @click="viewDetails(sig)">
-            <ion-avatar slot="start" :style="{ background: getStatutColor(sig.statutId) }">
+              <ion-avatar slot="start" :style="{ background: getStatutColor(sig.statutId) }">
               <span style="color: white; font-weight: bold; font-size: 18px">📍</span>
             </ion-avatar>
             <ion-label>
@@ -97,8 +81,7 @@
       <div v-else-if="!signalementStore.isLoading" class="empty-state">
         <ion-icon :icon="documentTextOutline" class="empty-icon"></ion-icon>
         <h3>Aucun signalement</h3>
-        <p v-if="filter === 'mes'">Vous n'avez pas encore créé de signalement.</p>
-        <p v-else>Aucun signalement n'a été enregistré.</p>
+        <p>Vous n'avez pas encore créé de signalement.</p>
         <ion-button @click="goToMap">
           <ion-icon :icon="mapOutline" slot="start"></ion-icon>
           Créer un signalement
@@ -150,6 +133,32 @@
             {{ selectedSignalement.description }}
           </ion-card-content>
         </ion-card>
+
+        <!-- Photos du signalement -->
+        <ion-card v-if="signalementPhotos.length > 0" class="photos-card">
+          <ion-card-header>
+            <ion-card-subtitle>
+              <ion-icon :icon="imagesOutline" style="margin-right: 8px;"></ion-icon>
+              Photos ({{ signalementPhotos.length }})
+            </ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="photo-gallery">
+              <div 
+                v-for="(photo, index) in signalementPhotos" 
+                :key="photo.id" 
+                class="photo-gallery-item"
+                @click="openPhotoFullscreen(photo.url)"
+              >
+                <img :src="photo.url" :alt="photo.nom" loading="lazy" />
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+        <div v-else-if="loadingPhotos" class="photos-loading">
+          <ion-spinner name="dots"></ion-spinner>
+          <p>Chargement des photos...</p>
+        </div>
 
         <!-- Informations -->
         <ion-list>
@@ -236,25 +245,30 @@ import {
   IonAlert, IonMenuButton
 } from '@ionic/vue'
 import {
-  refreshOutline, trashOutline, documentTextOutline, mapOutline,
+  trashOutline, documentTextOutline, mapOutline,
   arrowBackOutline, locationOutline, navigateOutline, calendarOutline,
-  personOutline, checkmarkCircleOutline, openOutline, alertCircleOutline
+  personOutline, checkmarkCircleOutline, openOutline, alertCircleOutline,
+  imagesOutline
 } from 'ionicons/icons'
 import { useSignalementStore } from '@/stores/signalementStore'
 import { useAuthStore } from '@/stores/authStore'
 import { statutLabels, statutColors } from '@/types/firestore.types'
-import type { Signalement } from '@/types/firestore.types'
+import type { Signalement, UserPhoto } from '@/types/firestore.types'
+import userPhotosService from '@/services/userPhotosService'
 
 const router = useRouter()
 const signalementStore = useSignalementStore()
 const authStore = useAuthStore()
 
 // State
-const filter = ref<'tous' | 'mes'>('tous')
 const showDetailModal = ref(false)
 const selectedSignalement = ref<Signalement | null>(null)
 const showDeleteAlert = ref(false)
 const signalementToDelete = ref<Signalement | null>(null)
+
+// Photos
+const signalementPhotos = ref<UserPhoto[]>([])
+const loadingPhotos = ref(false)
 
 // Toast
 const showToast = ref(false)
@@ -265,10 +279,7 @@ const toastColor = ref('success')
 const recap = computed(() => signalementStore.recap)
 
 const displayedSignalements = computed(() => {
-  if (filter.value === 'mes') {
-    return signalementStore.mesSignalements
-  }
-  return signalementStore.signalements
+  return signalementStore.mesSignalements
 })
 
 // Alert buttons
@@ -327,16 +338,12 @@ const formatDateLong = (date: Date | string | undefined) => {
 }
 
 const canDelete = (sig: Signalement): boolean => {
-  return sig.userId === authStore.currentUser?.id
+  return sig.userId === authStore.user?.id
 }
 
 // Actions
 const refreshSignalements = async () => {
-  if (filter.value === 'mes') {
-    await signalementStore.fetchMesSignalements()
-  } else {
-    await signalementStore.fetchAll()
-  }
+  await signalementStore.fetchMesSignalements()
   await signalementStore.fetchRecap()
 }
 
@@ -345,18 +352,31 @@ const handleRefresh = async (event: CustomEvent) => {
   ;(event.target as any).complete()
 }
 
-const onFilterChange = async () => {
-  await refreshSignalements()
-}
-
-const viewDetails = (sig: Signalement) => {
+const viewDetails = async (sig: Signalement) => {
   selectedSignalement.value = sig
   showDetailModal.value = true
+  
+  // Charger les photos du signalement
+  loadingPhotos.value = true
+  signalementPhotos.value = []
+  try {
+    signalementPhotos.value = await userPhotosService.getPhotosBySignalement(sig.id)
+  } catch (error) {
+    console.error('Erreur chargement photos:', error)
+  } finally {
+    loadingPhotos.value = false
+  }
 }
 
 const closeDetailModal = () => {
   showDetailModal.value = false
   selectedSignalement.value = null
+  signalementPhotos.value = []
+}
+
+const openPhotoFullscreen = (url: string) => {
+  // Ouvrir la photo dans un nouvel onglet
+  window.open(url, '_blank')
 }
 
 const goToMap = () => {
@@ -394,7 +414,8 @@ const deleteSignalement = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  await refreshSignalements()
+  await signalementStore.fetchMesSignalements()
+  await signalementStore.fetchRecap()
 })
 </script>
 
@@ -544,6 +565,49 @@ ion-chip {
   background: linear-gradient(45deg, #fff, #888);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Photo Gallery Styles */
+.photos-card {
+  margin: 16px 0;
+}
+
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.photo-gallery-item {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.photo-gallery-item:active {
+  transform: scale(0.95);
+}
+
+.photo-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photos-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #888;
+}
+
+.photos-loading p {
+  margin-top: 8px;
+  font-size: 14px;
 }
 </style>
 

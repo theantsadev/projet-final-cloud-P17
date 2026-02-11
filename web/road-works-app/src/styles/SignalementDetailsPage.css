@@ -366,3 +366,78 @@ textarea.form-control {
 .text-small {
   font-size: 0.75rem;
 }
+
+/* Calculated Budget Display */
+.calculated-budget {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+  border: 2px solid #0284c7;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.calculated-budget .budget-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0369a1;
+  letter-spacing: 0.025em;
+}
+
+.calculated-budget .budget-placeholder {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.calculated-budget .budget-formula {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-family: 'Menlo', 'Monaco', monospace;
+}
+
+/* Niveau Slider */
+.range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, #dcfce7, #fef9c3, #fee2e2);
+  border-radius: 4px;
+  outline: none;
+  padding: 0;
+}
+
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #3b82f6;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.range-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #3b82f6;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.niveau-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+

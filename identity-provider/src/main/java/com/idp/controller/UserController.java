@@ -188,8 +188,12 @@ public class UserController {
     public ResponseEntity<ApiResponse<?>> syncPullAll() {
         log.info("Synchronisation des utilisateurs depuis Firebase");
         syncService.invalidateOnlineCache(); // Force une nouvelle vérification
+        
+        int syncedCount = syncService.pullAllUsersFromFirestore();
         List<User> users = userService.getUsers();
-        return ResponseEntity.ok(ApiResponse.success(users, "Synchronisation depuis Firebase effectuée"));
+        
+        return ResponseEntity.ok(ApiResponse.success(users, 
+            "Synchronisation depuis Firebase effectuée - " + syncedCount + " utilisateurs synchronisés"));
     }
 
     /**
@@ -228,9 +232,12 @@ public class UserController {
     public ResponseEntity<ApiResponse<?>> testSyncFromFirebase() {
         log.info("TEST: Récupération des utilisateurs depuis Firebase");
         syncService.invalidateOnlineCache(); // Force une nouvelle vérification
+        
+        int syncedCount = syncService.pullAllUsersFromFirestore();
         List<User> users = userService.getUsers();
+        
         return ResponseEntity.ok(ApiResponse.success(
                 users,
-                "✅ Sync PULL depuis Firebase - " + users.size() + " utilisateurs récupérés"));
+                "✅ Sync PULL depuis Firebase - " + syncedCount + " utilisateurs synchronisés, " + users.size() + " au total"));
     }
 }

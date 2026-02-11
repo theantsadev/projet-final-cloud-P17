@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Create axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8081/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -73,8 +73,8 @@ export const signalementAPI = {
   update: (id, data) => api.put(`/signalements/${id}`, data),
   updateStatus: (id, statut) => api.patch(`/signalements/${id}/statut?statut=${statut}`),
   delete: (id) => api.delete(`/signalements/${id}`),
-  getStatistics: () => api.get('/signalements/stats/dashboard'),
-  // Sync endpoints
+  getRecap: () => api.get('/signalements/stats/recap'),
+  getDelaiMoyenTraitement: () => api.get('/signalements/stats/delai-moyen-traitement'),
   syncPushAll: () => api.post('/signalements/sync/push-all'),
   syncPullAll: () => api.post('/signalements/sync/pull-all'),
   // Test endpoints
@@ -99,4 +99,29 @@ export const usersAPI = {
   // Test endpoints
   testSyncPush: () => api.post('/users/test/sync-firebase-push'),
   testSyncPull: () => api.post('/users/test/sync-firebase-pull')
+}
+
+// Types de Réparation API
+export const typeReparationAPI = {
+  // CRUD Types
+  getAll: () => api.get('/type-reparations'),
+  getActive: () => api.get('/type-reparations/active'),
+  getById: (id) => api.get(`/type-reparations/${id}`),
+  create: (data) => api.post('/type-reparations', data),
+  update: (id, data) => api.put(`/type-reparations/${id}`, data),
+  delete: (id) => api.delete(`/type-reparations/${id}`),
+
+  // Prix global au m²
+  getPrixGlobal: () => api.get('/type-reparations/prix-global'),
+  setPrixGlobal: (prixM2Global) => api.put('/type-reparations/prix-global', { prixM2Global }),
+
+  // Affectation et calcul de budget (formule: prix_m2_global × niveau × surface_m2)
+  assignToSignalement: (signalementId, typeReparationId) => 
+    api.post('/type-reparations/assign', { signalementId, typeReparationId }),
+  setNiveau: (signalementId, niveau) =>
+    api.post('/type-reparations/set-niveau', { signalementId, niveau }),
+  recalculateBudget: (signalementId) => 
+    api.post(`/type-reparations/recalculate-budget/${signalementId}`),
+  calculateBudget: (surfaceM2, niveau) => 
+    api.get(`/type-reparations/calculate-budget?surfaceM2=${surfaceM2}&niveau=${niveau}`)
 }

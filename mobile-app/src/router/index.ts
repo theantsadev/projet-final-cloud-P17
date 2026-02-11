@@ -31,6 +31,12 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Signalements',
     component: () => import('../views/SignalementsPage.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('../views/NotificationsPage.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

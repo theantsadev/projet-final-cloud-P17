@@ -3,7 +3,8 @@ package com.idp.controller;
 import com.idp.dto.ApiResponse;
 import com.idp.dto.SignalementRequest;
 import com.idp.dto.SignalementResponse;
-import com.idp.dto.SignalementStatisticsResponse;
+import com.idp.dto.SignalementRecapResponse;
+import com.idp.dto.DelaiMoyenTraitementResponse;
 import com.idp.service.SignalementService;
 import com.idp.service.SyncService;
 import com.idp.repository.UserRepository;
@@ -50,7 +51,7 @@ public class SignalementController {
                 .latitude(Double.parseDouble(payload.getOrDefault("latitude", "-18.8792").toString()))
                 .longitude(Double.parseDouble(payload.getOrDefault("longitude", "47.5079").toString()))
                 .surfaceM2(new java.math.BigDecimal(payload.getOrDefault("surfaceM2", "25.5").toString()))
-                .budget(new java.math.BigDecimal(payload.getOrDefault("budget", "5000000").toString()))
+                .niveau(Integer.parseInt(payload.getOrDefault("niveau", "5").toString()))
                 .entrepriseConcernee((String) payload.getOrDefault("entrepriseConcernee", "Test Constructo"))
                 .pourcentageAvancement(Integer.parseInt(payload.getOrDefault("pourcentageAvancement", "0").toString()))
                 .build();
@@ -78,7 +79,7 @@ public class SignalementController {
                 .latitude(-18.8792)
                 .longitude(47.5079)
                 .surfaceM2(new java.math.BigDecimal("25.5"))
-                .budget(new java.math.BigDecimal("5000000"))
+                .niveau(5)
                 .entrepriseConcernee("Test Constructo")
                 .pourcentageAvancement(0)
                 .build();
@@ -217,15 +218,28 @@ public class SignalementController {
     }
 
     /**
-     * Obtenir les statistiques des signalements
+     * Obtenir le récapitulatif des statistiques
      */
-    @GetMapping("/stats/dashboard")
-    public ResponseEntity<ApiResponse<?>> getStatistics() {
+    @GetMapping("/stats/recap")
+    public ResponseEntity<ApiResponse<?>> getRecap() {
 
-        log.info("Récupération des statistiques des signalements");
-        SignalementStatisticsResponse stats = signalementService.getStatistics();
+        log.info("Récupération du récapitulatif des statistiques");
+        SignalementRecapResponse recap = signalementService.getRecap();
 
-        return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques récupérées avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(recap, "Récapitulatif récupéré avec succès"));
+    }
+
+    /**
+     * Obtenir les délais moyens de traitement
+     */
+    @GetMapping("/stats/delai-moyen-traitement")
+    @PreAuthorize("hasAnyRole('MANAGER')")
+    public ResponseEntity<ApiResponse<?>> getDelaiMoyenTraitement() {
+
+        log.info("Récupération des délais moyens de traitement");
+        DelaiMoyenTraitementResponse delais = signalementService.getDelaiMoyenTraitement();
+
+        return ResponseEntity.ok(ApiResponse.success(delais, "Délais récupérés avec succès"));
     }
 
     /**
@@ -263,18 +277,19 @@ public class SignalementController {
 
         log.info("TEST: Synchronisation vers Firebase");
         syncService.invalidateOnlineCache();
-        
+
         // Vérifier la connexion une fois pour peupler le cache
         long start = System.currentTimeMillis();
         boolean isOnline = syncService.isOnline();
         long duration = System.currentTimeMillis() - start;
-        
+
         if (!isOnline) {
             log.warn("❌ Firebase offline - Impossible de syncer");
             return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(ApiResponse.error("Firebase offline - Synchronisation impossible", "FIREBASE_UNAVAILABLE", 503));
+                    .body(ApiResponse.error("Firebase offline - Synchronisation impossible", "FIREBASE_UNAVAILABLE",
+                            503));
         }
-        
+
         log.info("✅ Connexion Firebase OK en {}ms", duration);
         signalementService.synchronizeAllPending();
 

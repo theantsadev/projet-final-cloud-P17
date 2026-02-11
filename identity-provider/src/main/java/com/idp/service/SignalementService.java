@@ -13,12 +13,14 @@ import com.idp.repository.HistoriqueStatutSignalementRepository;
 import com.idp.repository.SignalementRepository;
 import com.idp.repository.StatutAvancementSignalementRepository;
 import com.idp.repository.UserRepository;
+import com.idp.repository.GlobalConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +37,30 @@ public class SignalementService {
     private final UserRepository userRepository;
     private final StatutAvancementSignalementRepository statutRepository;
     private final HistoriqueStatutSignalementRepository historiqueRepository;
+    private final NotificationService notificationService;
     private final Firestore firestore;
+    private final GlobalConfigRepository globalConfigRepository;
     private static final String COLLECTION_NAME = "signalements";
+
+    /**
+     * Récupérer le prix global au m² depuis la configuration
+     */
+    private BigDecimal getPrixM2Global() {
+        return globalConfigRepository.findByConfigKey(com.idp.entity.GlobalConfig.PRIX_M2_GLOBAL_KEY)
+                .map(com.idp.entity.GlobalConfig::getValueAsBigDecimal)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Calculer le budget dynamiquement: prix_m2_global × niveau × surface_m2
+     */
+    private BigDecimal calculerBudget(BigDecimal surfaceM2, Integer niveau) {
+        if (surfaceM2 == null || niveau == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal prixM2Global = getPrixM2Global();
+        return prixM2Global.multiply(new BigDecimal(niveau)).multiply(surfaceM2);
+    }
 
     /**
      * Créer un nouveau signalement
@@ -59,7 +83,7 @@ public class SignalementService {
                     .latitude(request.getLatitude())
                     .longitude(request.getLongitude())
                     .surfaceM2(request.getSurfaceM2())
-                    .budget(request.getBudget())
+                    .niveau(request.getNiveau())
                     .entrepriseConcernee(request.getEntrepriseConcernee())
                     .statut(statutNouveauOpt)
                     .isSynchronized(false)
@@ -136,7 +160,7 @@ public class SignalementService {
         signalement.setLatitude(request.getLatitude());
         signalement.setLongitude(request.getLongitude());
         signalement.setSurfaceM2(request.getSurfaceM2());
-        signalement.setBudget(request.getBudget());
+        signalement.setNiveau(request.getNiveau());
         signalement.setEntrepriseConcernee(request.getEntrepriseConcernee());
 
         signalement.setIsSynchronized(false);
@@ -164,7 +188,17 @@ public class SignalementService {
         signalement = signalementRepository.save(signalement);
 
         // Enregistrer l'historique du changement de statut
-        enregistrerHistoriqueStatut(signalement, statut, LocalDateTime.now());
+        HistoriqueStatutSignalement historique = enregistrerHistoriqueStatut(signalement, statut, LocalDateTime.now());
+
+        // Créer une notification pour l'utilisateur propriétaire du signalement
+        if (historique != null && signalement.getSignaleur() != null) {
+            String motif = "Votre signalement \"" + signalement.getTitre() +
+                    "\" a été mis à jour: " + statut.getStatut() +
+                    " (" + statut.getAvancement() + "%)";
+            notificationService.createNotificationForStatusChange(signalement, historique, statut, motif);
+            log.info("📢 Notification créée pour l'utilisateur {} suite au changement de statut du signalement {}",
+                    signalement.getSignaleur().getId(), signalement.getId());
+        }
 
         // Synchroniser vers Firebase
         synchronizeToFirebase(signalement);
@@ -309,6 +343,10 @@ public class SignalementService {
 
                         signalement.setEntrepriseConcernee(doc.getString("entrepriseConcernee"));
 
+                        // Récupérer les timestamps
+                        signalement.setCreatedAt(convertToLocalDateTime(doc.get("createdAt")));
+                        signalement.setUpdatedAt(convertToLocalDateTime(doc.get("updatedAt")));
+
                         // Récupérer et convertir le statut
                         String statutId = doc.getString("statutId");
                         StatutAvancementSignalement statut = null;
@@ -401,9 +439,31 @@ public class SignalementService {
     }
 
     /**
-     * Obtenir les statistiques des signalements
+     * Convertir un objet Firebase Timestamp en LocalDateTime de manière sûre
      */
-    public com.idp.dto.SignalementStatisticsResponse getStatistics() {
+    private LocalDateTime convertToLocalDateTime(Object value) {
+        if (value == null) {
+            return LocalDateTime.now();
+        }
+
+        if (value instanceof com.google.cloud.Timestamp) {
+            com.google.cloud.Timestamp timestamp = (com.google.cloud.Timestamp) value;
+            return timestamp.toDate().toInstant()
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime();
+        } else if (value instanceof java.util.Date) {
+            return ((java.util.Date) value).toInstant()
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime();
+        }
+        // Fallback: retourner le timestamp actuel si la conversion échoue
+        return LocalDateTime.now();
+    }
+
+    /**
+     * Obtenir le récapitulatif des statistiques des signalements
+     */
+    public com.idp.dto.SignalementRecapResponse getRecap() {
         List<Signalement> allSignalements = signalementRepository.findAll();
 
         long total = allSignalements.size();
@@ -417,9 +477,14 @@ public class SignalementService {
                 .filter(java.util.Objects::nonNull)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
+        // Calcul dynamique du budget total: prix_m2_global × niveau × surface_m2
+        BigDecimal prixM2Global = globalConfigRepository.findByConfigKey(com.idp.entity.GlobalConfig.PRIX_M2_GLOBAL_KEY)
+                .map(com.idp.entity.GlobalConfig::getValueAsBigDecimal)
+                .orElse(BigDecimal.ZERO);
+
         java.math.BigDecimal totalBudget = allSignalements.stream()
-                .map(Signalement::getBudget)
-                .filter(java.util.Objects::nonNull)
+                .filter(s -> s.getSurfaceM2() != null && s.getNiveau() != null)
+                .map(s -> prixM2Global.multiply(new BigDecimal(s.getNiveau())).multiply(s.getSurfaceM2()))
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         Double averageAvancement = allSignalements.stream()
@@ -427,7 +492,7 @@ public class SignalementService {
                 .average()
                 .orElse(0.0);
 
-        return com.idp.dto.SignalementStatisticsResponse.builder()
+        return com.idp.dto.SignalementRecapResponse.builder()
                 .totalSignalements(total)
                 .signalementNouveaux(nouveaux)
                 .signalementEnCours(enCours)
@@ -440,9 +505,79 @@ public class SignalementService {
     }
 
     /**
+     * Obtenir les délais moyens de traitement
+     */
+    public com.idp.dto.DelaiMoyenTraitementResponse getDelaiMoyenTraitement() {
+        List<Signalement> allSignalements = signalementRepository.findAll();
+
+        // Calculer les délais moyens de traitement
+        java.util.List<Double> delaisNouveauEnCours = new java.util.ArrayList<>();
+        java.util.List<Double> delaisEnCoursTermine = new java.util.ArrayList<>();
+        java.util.List<Double> delaisTotal = new java.util.ArrayList<>();
+
+        for (Signalement signalement : allSignalements) {
+            List<HistoriqueStatutSignalement> historique = historiqueRepository
+                    .findBySignalementIdOrderByDateAsc(signalement.getId());
+
+            LocalDateTime dateNouveau = null;
+            LocalDateTime dateEnCours = null;
+            LocalDateTime dateTermine = null;
+
+            for (HistoriqueStatutSignalement h : historique) {
+                String statut = h.getStatutAvancementSignalement().getStatut();
+                if ("NOUVEAU".equals(statut) && dateNouveau == null) {
+                    dateNouveau = h.getDate();
+                } else if ("EN_COURS".equals(statut) && dateEnCours == null) {
+                    dateEnCours = h.getDate();
+                } else if ("TERMINE".equals(statut) && dateTermine == null) {
+                    dateTermine = h.getDate();
+                }
+            }
+
+            // Si pas d'historique NOUVEAU, utiliser createdAt
+            if (dateNouveau == null) {
+                dateNouveau = signalement.getCreatedAt();
+            }
+
+            // Calculer délai NOUVEAU -> EN_COURS
+            if (dateNouveau != null && dateEnCours != null) {
+                double delaiJours = java.time.Duration.between(dateNouveau, dateEnCours).toHours() / 24.0;
+                delaisNouveauEnCours.add(delaiJours);
+            }
+
+            // Calculer délai EN_COURS -> TERMINE
+            if (dateEnCours != null && dateTermine != null) {
+                double delaiJours = java.time.Duration.between(dateEnCours, dateTermine).toHours() / 24.0;
+                delaisEnCoursTermine.add(delaiJours);
+            }
+
+            // Calculer délai total NOUVEAU -> TERMINE
+            if (dateNouveau != null && dateTermine != null) {
+                double delaiJours = java.time.Duration.between(dateNouveau, dateTermine).toHours() / 24.0;
+                delaisTotal.add(delaiJours);
+            }
+        }
+
+        Double delaiMoyenNouveauEnCours = delaisNouveauEnCours.isEmpty() ? null
+                : delaisNouveauEnCours.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        Double delaiMoyenEnCoursTermine = delaisEnCoursTermine.isEmpty() ? null
+                : delaisEnCoursTermine.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        Double delaiMoyenTraitementTotal = delaisTotal.isEmpty() ? null
+                : delaisTotal.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+
+        return com.idp.dto.DelaiMoyenTraitementResponse.builder()
+                .delaiMoyenNouveauEnCours(delaiMoyenNouveauEnCours)
+                .delaiMoyenEnCoursTermine(delaiMoyenEnCoursTermine)
+                .delaiMoyenTraitementTotal(delaiMoyenTraitementTotal)
+                .nombreSignalementsTraites((long) delaisTotal.size())
+                .build();
+    }
+
+    /**
      * Enregistrer un changement de statut dans l'historique
      */
-    private void enregistrerHistoriqueStatut(Signalement signalement, StatutAvancementSignalement statut,
+    private HistoriqueStatutSignalement enregistrerHistoriqueStatut(Signalement signalement,
+            StatutAvancementSignalement statut,
             LocalDateTime date) {
         try {
             HistoriqueStatutSignalement historique = HistoriqueStatutSignalement.builder()
@@ -451,11 +586,13 @@ public class SignalementService {
                     .date(date)
                     .build();
 
-            historiqueRepository.save(historique);
+            historique = historiqueRepository.save(historique);
             log.info("Historique enregistré pour le signalement {}: statut {}", signalement.getId(),
                     statut.getStatut());
+            return historique;
         } catch (Exception e) {
             log.error("Erreur lors de l'enregistrement de l'historique du statut", e);
+            return null;
         }
     }
 
@@ -486,6 +623,42 @@ public class SignalementService {
      * Mapper une entité Signalement vers SignalementResponse
      */
     private SignalementResponse mapToResponse(Signalement signalement) {
+        // Récupérer les dates d'avancement depuis l'historique
+        List<HistoriqueStatutSignalement> historique = historiqueRepository
+                .findBySignalementIdOrderByDateAsc(signalement.getId());
+
+        LocalDateTime dateNouveau = null;
+        LocalDateTime dateEnCours = null;
+        LocalDateTime dateTermine = null;
+
+        for (HistoriqueStatutSignalement h : historique) {
+            String statut = h.getStatutAvancementSignalement().getStatut();
+            if ("NOUVEAU".equals(statut) && dateNouveau == null) {
+                dateNouveau = h.getDate();
+            } else if ("EN_COURS".equals(statut) && dateEnCours == null) {
+                dateEnCours = h.getDate();
+            } else if ("TERMINE".equals(statut) && dateTermine == null) {
+                dateTermine = h.getDate();
+            }
+        }
+
+        // Si pas d'historique NOUVEAU, utiliser createdAt
+        if (dateNouveau == null) {
+            dateNouveau = signalement.getCreatedAt();
+        }
+
+        // Calcul dynamique du budget: prix_m2_global × niveau × surface_m2
+        BigDecimal prixM2Global = globalConfigRepository.findByConfigKey(com.idp.entity.GlobalConfig.PRIX_M2_GLOBAL_KEY)
+                .map(com.idp.entity.GlobalConfig::getValueAsBigDecimal)
+                .orElse(BigDecimal.ZERO);
+
+        BigDecimal budgetCalcule = BigDecimal.ZERO;
+        if (signalement.getSurfaceM2() != null && signalement.getNiveau() != null) {
+            budgetCalcule = prixM2Global
+                    .multiply(new BigDecimal(signalement.getNiveau()))
+                    .multiply(signalement.getSurfaceM2());
+        }
+
         return SignalementResponse.builder()
                 .id(signalement.getId())
                 .titre(signalement.getTitre())
@@ -494,7 +667,9 @@ public class SignalementService {
                 .latitude(signalement.getLatitude())
                 .longitude(signalement.getLongitude())
                 .surfaceM2(signalement.getSurfaceM2())
-                .budget(signalement.getBudget())
+                .niveau(signalement.getNiveau())
+                .budget(budgetCalcule)
+                .prixM2Global(prixM2Global)
                 .entrepriseConcernee(signalement.getEntrepriseConcernee())
                 .pourcentageAvancement(signalement.getStatut().getAvancement())
                 .signaleurId(signalement.getSignaleur() != null ? signalement.getSignaleur().getId() : null)
@@ -504,6 +679,9 @@ public class SignalementService {
                 .lastSyncedAt(signalement.getLastSyncedAt())
                 .createdAt(signalement.getCreatedAt())
                 .updatedAt(signalement.getUpdatedAt())
+                .dateNouveau(dateNouveau)
+                .dateEnCours(dateEnCours)
+                .dateTermine(dateTermine)
                 .build();
     }
 }

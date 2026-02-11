@@ -57,15 +57,6 @@
             </ion-label>
             <ion-icon :icon="chevronForwardOutline" slot="end"></ion-icon>
           </ion-item>
-
-          <ion-item button @click="goToProfile">
-            <ion-icon :icon="personOutline" slot="start" color="tertiary"></ion-icon>
-            <ion-label>
-              <h2>Profil</h2>
-              <p>Gérer votre profil</p>
-            </ion-label>
-            <ion-icon :icon="chevronForwardOutline" slot="end"></ion-icon>
-          </ion-item>
         </ion-list>
 
         <!-- Statistiques -->
@@ -178,11 +169,7 @@ const goToMap = () => {
   toastColor.value = 'warning'
 }
 
-const goToProfile = () => {
-  showToast.value = true
-  toastMessage.value = 'Page en cours de développement'
-  toastColor.value = 'warning'
-}
+
 </script>
 
 

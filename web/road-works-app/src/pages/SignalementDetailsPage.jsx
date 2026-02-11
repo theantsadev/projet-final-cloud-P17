@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { signalementAPI } from '../services/api'
+import { signalementAPI, typeReparationAPI } from '../services/api'
 import '../styles/SignalementDetailsPage.css'
 
 function SignalementDetailsPage() {
@@ -9,6 +9,11 @@ function SignalementDetailsPage() {
     const [signalement, setSignalement] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [typesReparation, setTypesReparation] = useState([])
+    const [prixM2Global, setPrixM2Global] = useState(0)
+    const [selectedTypeId, setSelectedTypeId] = useState('')
+    const [selectedNiveau, setSelectedNiveau] = useState('')
+    const [calculatedBudget, setCalculatedBudget] = useState(null)
     const [formData, setFormData] = useState({
         titre: '',
         description: '',
@@ -24,7 +29,30 @@ function SignalementDetailsPage() {
 
     useEffect(() => {
         loadSignalement()
+        loadTypesReparation()
     }, [id])
+
+    const loadTypesReparation = async () => {
+        try {
+            const response = await typeReparationAPI.getActive()
+            const data = response.data?.data || {}
+            setTypesReparation(data.types || [])
+            setPrixM2Global(data.prixM2Global || 0)
+        } catch (err) {
+            console.error('Erreur chargement types de réparation:', err)
+        }
+    }
+
+    // Calculer le budget automatiquement quand la surface ou le niveau change
+    // Formule: budget = prixM2Global × niveau × surfaceM2
+    useEffect(() => {
+        if (selectedNiveau && formData.surfaceM2 && prixM2Global > 0) {
+            const budget = prixM2Global * parseInt(selectedNiveau) * parseFloat(formData.surfaceM2)
+            setCalculatedBudget(budget)
+        } else {
+            setCalculatedBudget(null)
+        }
+    }, [selectedNiveau, formData.surfaceM2, prixM2Global])
 
     const loadSignalement = async () => {
         try {
@@ -42,6 +70,14 @@ function SignalementDetailsPage() {
                 entrepriseConcernee: data.entrepriseConcernee || '',
                 pourcentageAvancement: data.pourcentageAvancement || 0
             })
+            // Si un niveau est déjà défini
+            if (data.niveau) {
+                setSelectedNiveau(data.niveau.toString())
+            }
+            // Si un type de réparation est déjà assigné
+            if (data.typeReparation?.id) {
+                setSelectedTypeId(data.typeReparation.id)
+            }
         } catch (err) {
             setError('Erreur lors du chargement du signalement')
             console.error(err)
@@ -76,7 +112,19 @@ function SignalementDetailsPage() {
             setError('')
             setSuccess('')
 
+            // 1. Mettre à jour le signalement
             await signalementAPI.update(id, formData)
+
+            // 2. Définir le niveau et calculer le budget si un niveau est sélectionné
+            if (selectedNiveau) {
+                await typeReparationAPI.setNiveau(id, parseInt(selectedNiveau))
+            }
+
+            // 3. Affecter le type de réparation si sélectionné (optionnel, pour catégorisation)
+            if (selectedTypeId) {
+                await typeReparationAPI.assignToSignalement(id, selectedTypeId)
+            }
+
             setSuccess('Signalement mis à jour avec succès')
 
             setTimeout(() => {
@@ -233,6 +281,70 @@ function SignalementDetailsPage() {
                                     step="10000"
                                     className="form-control"
                                 />
+                            </div>
+                        </div>
+
+                        {/* Type de Réparation (catégorisation) */}
+                        <div className="form-group">
+                            <label htmlFor="typeReparation">Type de Réparation (catégorie)</label>
+                            <select
+                                id="typeReparation"
+                                name="typeReparation"
+                                value={selectedTypeId}
+                                onChange={(e) => setSelectedTypeId(e.target.value)}
+                                className="form-control"
+                            >
+                                <option value="">-- Sélectionner un type --</option>
+                                {typesReparation.map(type => (
+                                    <option key={type.id} value={type.id}>
+                                        {type.nom} (Niveau {type.niveau})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Niveau et Budget Calculé */}
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label htmlFor="niveau">
+                                    Niveau de réparation : <strong>{selectedNiveau}</strong>
+                                </label>
+                                <input
+                                    type="range"
+                                    id="niveau"
+                                    name="niveau"
+                                    value={selectedNiveau}
+                                    onChange={(e) => setSelectedNiveau(e.target.value)}
+                                    min="1"
+                                    max="10"
+                                    step="1"
+                                    className="form-control range-input"
+                                />
+                                <div className="niveau-labels">
+                                    <span>1 - Léger</span>
+                                    <span>5 - Moyen</span>
+                                    <span>10 - Critique</span>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Budget Calculé (Ar)</label>
+                                <div className="calculated-budget">
+                                    {calculatedBudget !== null ? (
+                                        <>
+                                            <span className="budget-value">
+                                                {calculatedBudget.toLocaleString()} Ar
+                                            </span>
+                                            <span className="budget-formula">
+                                                {prixM2Global?.toLocaleString()} × {selectedNiveau} × {formData.surfaceM2 || 0} m²
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span className="budget-placeholder">
+                                            Entrez une surface pour calculer
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

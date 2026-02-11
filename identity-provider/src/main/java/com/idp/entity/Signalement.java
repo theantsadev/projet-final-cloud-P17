@@ -1,6 +1,8 @@
 package com.idp.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -43,8 +45,28 @@ public class Signalement {
     @Column(name = "surface_m2")
     private BigDecimal surfaceM2;
 
+    /**
+     * Niveau de gravité du signalement (1-10)
+     * Utilisé pour calculer le budget: budget = prix_m2_global × niveau × surface_m2
+     */
+    @Min(value = 1, message = "Le niveau doit être au minimum 1")
+    @Max(value = 10, message = "Le niveau doit être au maximum 10")
+    @Column(name = "niveau")
+    private Integer niveau;
+
+    /**
+     * Budget calculé dynamiquement: prix_m2_global × niveau × surface_m2
+     * Ce champ est stocké pour l'historique mais recalculé lors des mises à jour
+     */
     @Column(name = "budget")
     private BigDecimal budget;
+
+    /**
+     * Type de réparation affecté par le manager (optionnel, pour catégorisation)
+     */
+    @ManyToOne
+    @JoinColumn(name = "type_reparation_id")
+    private TypeReparation typeReparation;
 
     @Column(name = "entreprise_concernee", length = 255)
     private String entrepriseConcernee;

@@ -21,7 +21,18 @@ public class SignalementResponse {
     private Double latitude;
     private Double longitude;
     private BigDecimal surfaceM2;
+    /**
+     * Niveau de gravité (1-10)
+     */
+    private Integer niveau;
+    /**
+     * Budget calculé: prix_m2_global × niveau × surface_m2
+     */
     private BigDecimal budget;
+    /**
+     * Prix global au m² utilisé pour le calcul du budget
+     */
+    private BigDecimal prixM2Global;
     private String entrepriseConcernee;
     private Integer pourcentageAvancement;
     private String signaleurId;
@@ -31,4 +42,9 @@ public class SignalementResponse {
     private LocalDateTime lastSyncedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Dates d'avancement pour chaque étape
+    private LocalDateTime dateNouveau;      // Date de création (NOUVEAU = 0%)
+    private LocalDateTime dateEnCours;      // Date de passage à EN_COURS (50%)
+    private LocalDateTime dateTermine;      // Date de passage à TERMINE (100%)
 }

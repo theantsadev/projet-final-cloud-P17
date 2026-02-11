@@ -10,9 +10,6 @@
           <ion-button @click="refreshSignalements">
             <ion-icon :icon="refreshOutline"></ion-icon>
           </ion-button>
-          <ion-button @click="handleLogout" color="danger">
-            <ion-icon :icon="logOutOutline"></ion-icon>
-          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -40,7 +37,7 @@
               <span class="recap-label">Terminés</span>
             </div>
           </div>
-
+          
           <!-- Statistiques détaillées -->
           <div class="recap-stats-row">
             <div class="recap-stat">
@@ -62,14 +59,6 @@
       <!-- Filtre et contrôles -->
       <div class="card-header" style="padding: 16px; background: white; border-bottom: 1px solid #e5e7eb;">
         <div class="controls-row">
-          <div class="btn-group">
-            <ion-button @click="filter = 'tous'" :fill="filter === 'tous' ? 'solid' : 'outline'" size="small">
-              Tous
-            </ion-button>
-            <ion-button @click="filter = 'mes'" :fill="filter === 'mes' ? 'solid' : 'outline'" size="small">
-              Mes signalements
-            </ion-button>
-          </div>
           <ion-button color="success" @click="startAddSignalement" size="small">
             <ion-icon :icon="addOutline" slot="start"></ion-icon>
             Ajouter
@@ -110,19 +99,92 @@
           <!-- Titre -->
           <ion-item>
             <ion-label position="stacked">Titre *</ion-label>
-            <ion-input v-model="newSignalement.titre" placeholder="Décrire le problème..." required></ion-input>
+            <ion-input 
+              v-model="newSignalement.titre" 
+              placeholder="Décrire le problème..."
+              required
+            ></ion-input>
           </ion-item>
 
           <!-- Description -->
           <ion-item>
             <ion-label position="stacked">Description</ion-label>
-            <ion-textarea v-model="newSignalement.description" placeholder="Détails supplémentaires..."
-              :rows="3"></ion-textarea>
+            <ion-textarea 
+              v-model="newSignalement.description" 
+              placeholder="Détails supplémentaires..."
+              :rows="3"
+            ></ion-textarea>
           </ion-item>
 
+          <!-- Upload de photos -->
+          <ion-card color="light" class="photo-upload-card">
+            <ion-card-header>
+              <ion-card-subtitle>
+                <ion-icon :icon="cameraOutline" style="margin-right: 8px;"></ion-icon>
+                Photos ({{ selectedPhotos.length }}/5 max)
+              </ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content>
+              <!-- Input fichier caché -->
+              <input 
+                type="file" 
+                ref="photoInput" 
+                @change="onPhotosSelected" 
+                accept="image/*" 
+                multiple 
+                :disabled="selectedPhotos.length >= 5"
+                style="display: none;"
+              />
+              
+              <!-- Bouton pour sélectionner des photos -->
+              <ion-button 
+                expand="block" 
+                fill="outline" 
+                @click="triggerPhotoInput"
+                :disabled="selectedPhotos.length >= 5"
+              >
+                <ion-icon :icon="imageOutline" slot="start"></ion-icon>
+                {{ selectedPhotos.length > 0 ? 'Ajouter d\'autres photos' : 'Sélectionner des photos' }}
+              </ion-button>
+              
+              <!-- Prévisualisation des photos sélectionnées -->
+              <div v-if="selectedPhotos.length > 0" class="photo-preview-container">
+                <div 
+                  v-for="(photo, index) in photoPreviewUrls" 
+                  :key="index" 
+                  class="photo-preview-item"
+                >
+                  <img :src="photo" :alt="'Photo ' + (index + 1)" />
+                  <ion-button 
+                    fill="clear" 
+                    size="small" 
+                    color="danger" 
+                    class="remove-photo-btn"
+                    @click="removePhoto(index)"
+                  >
+                    <ion-icon :icon="closeCircleOutline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+              
+              <!-- Progression de l'upload -->
+              <div v-if="uploadProgress.isUploading" class="upload-progress">
+                <ion-progress-bar :value="uploadProgress.percentage / 100"></ion-progress-bar>
+                <ion-text color="medium">
+                  <p>Upload en cours... {{ uploadProgress.currentFile }}/{{ uploadProgress.totalFiles }} - {{ uploadProgress.percentage }}%</p>
+                </ion-text>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
           <!-- Bouton soumettre -->
-          <ion-button expand="block" type="submit" class="ion-margin-top" :disabled="!isFormValid || isLoading">
-            <ion-spinner v-if="isLoading" name="crescent"></ion-spinner>
+          <ion-button 
+            expand="block" 
+            type="submit" 
+            class="ion-margin-top"
+            :disabled="!isFormValid || isLoading || uploadProgress.isUploading"
+          >
+            <ion-spinner v-if="isLoading || uploadProgress.isUploading" name="crescent"></ion-spinner>
             <span v-else>Envoyer le signalement</span>
           </ion-button>
         </form>
@@ -179,12 +241,43 @@
             </ion-label>
           </ion-item>
         </ion-list>
+
+        <!-- Photos du signalement -->
+        <ion-card v-if="detailPhotos.length > 0" class="photos-card">
+          <ion-card-header>
+            <ion-card-subtitle>
+              <ion-icon :icon="imagesOutline" style="margin-right: 8px;"></ion-icon>
+              Photos ({{ detailPhotos.length }})
+            </ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="photo-gallery">
+              <div 
+                v-for="(photo, index) in detailPhotos" 
+                :key="photo.id || index" 
+                class="photo-gallery-item"
+                @click="openPhotoFullscreen(photo.url)"
+              >
+                <img :src="photo.url" :alt="photo.nom" loading="lazy" />
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+        <div v-else-if="loadingDetailPhotos" class="photos-loading">
+          <ion-spinner name="dots"></ion-spinner>
+          <p>Chargement des photos...</p>
+        </div>
       </ion-content>
     </ion-modal>
 
     <!-- Toast -->
-    <ion-toast :is-open="showToast" :message="toastMessage" :color="toastColor" :duration="3000"
-      @didDismiss="showToast = false"></ion-toast>
+    <ion-toast
+      :is-open="showToast"
+      :message="toastMessage"
+      :color="toastColor"
+      :duration="3000"
+      @didDismiss="showToast = false"
+    ></ion-toast>
   </ion-page>
 </template>
 
@@ -194,30 +287,25 @@ import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
   IonButton, IonIcon, IonCard, IonCardContent, IonModal, IonLoading,
   IonMenuButton, IonItem, IonLabel, IonInput, IonTextarea, IonChip,
-  IonSpinner, IonToast, IonList, IonCardHeader
+  IonSpinner, IonToast, IonList, IonCardHeader, IonCardSubtitle,
+  IonProgressBar, IonText
 } from '@ionic/vue'
 import {
   refreshOutline, addOutline, closeOutline, locationOutline,
-  calendarOutline, arrowBackOutline, logOutOutline
+  calendarOutline, arrowBackOutline, cameraOutline, imageOutline,
+  closeCircleOutline, imagesOutline
 } from 'ionicons/icons'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSignalementStore } from '@/stores/signalementStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useRouter } from 'vue-router'
 import { statutColors } from '@/types/firestore.types'
-import type { Signalement } from '@/types/firestore.types'
+import type { Signalement, UserPhoto } from '@/types/firestore.types'
 import firestoreSignalementService from '@/services/firestoreSignalementService'
+import userPhotosService, { MAX_PHOTOS } from '@/services/userPhotosService'
 
 const signalementStore = useSignalementStore()
 const authStore = useAuthStore()
-const router = useRouter()
-
-// Déconnexion
-const handleLogout = async () => {
-  await authStore.logout()
-  router.replace('/login')
-}
 
 // Map
 const mapContainer = ref<HTMLElement | null>(null)
@@ -238,10 +326,25 @@ const showDetailModal = ref(false)
 const selectedSignalement = ref<Signalement | null>(null)
 const selectedMapPoint = ref<{ lat: number; lng: number } | null>(null)
 
+// Photos pour le modal de détails
+const detailPhotos = ref<UserPhoto[]>([])
+const loadingDetailPhotos = ref(false)
+
 // Form
 const newSignalement = ref({
   titre: '',
   description: ''
+})
+
+// Photos
+const photoInput = ref<HTMLInputElement | null>(null)
+const selectedPhotos = ref<File[]>([])
+const photoPreviewUrls = ref<string[]>([])
+const uploadProgress = ref({
+  isUploading: false,
+  currentFile: 0,
+  totalFiles: 0,
+  percentage: 0
 })
 
 // Toast
@@ -312,7 +415,7 @@ const initMap = () => {
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (isAddingMode.value) {
       const { lat, lng } = e.latlng
-
+      
       // Remove old temp marker
       if (tempMarker) {
         tempMarker.removeFrom(map!)
@@ -344,7 +447,7 @@ const loadMarkers = () => {
 
   displayedSignalements.value.forEach((sig, index) => {
     const color = getMarkerColor(sig.statut?.statut || 'NOUVEAU')
-
+    
     const marker = L.marker([sig.latitude, sig.longitude], {
       icon: L.divIcon({
         className: 'custom-marker',
@@ -356,9 +459,21 @@ const loadMarkers = () => {
       })
     })
 
-    marker.on('click', () => {
+    marker.on('click', async () => {
       selectedSignalement.value = sig
       showDetailModal.value = true
+      
+      // Charger les photos du signalement
+      loadingDetailPhotos.value = true
+      detailPhotos.value = []
+      try {
+        detailPhotos.value = await userPhotosService.getPhotosBySignalement(sig.id)
+        console.log('Photos chargées:', detailPhotos.value.length)
+      } catch (error) {
+        console.error('Erreur chargement photos:', error)
+      } finally {
+        loadingDetailPhotos.value = false
+      }
     })
 
     markersLayer!.addLayer(marker)
@@ -399,6 +514,56 @@ const resetForm = () => {
     description: ''
   }
   selectedMapPoint.value = null
+  // Réinitialiser les photos
+  selectedPhotos.value = []
+  photoPreviewUrls.value.forEach(url => URL.revokeObjectURL(url))
+  photoPreviewUrls.value = []
+  uploadProgress.value = {
+    isUploading: false,
+    currentFile: 0,
+    totalFiles: 0,
+    percentage: 0
+  }
+}
+
+// Fonctions pour la gestion des photos
+const triggerPhotoInput = () => {
+  photoInput.value?.click()
+}
+
+const onPhotosSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (!input.files) return
+  
+  const files = Array.from(input.files)
+  const remainingSlots = MAX_PHOTOS - selectedPhotos.value.length
+  const filesToAdd = files.slice(0, remainingSlots)
+  
+  if (files.length > remainingSlots) {
+    toastMessage.value = `Seulement ${remainingSlots} photo(s) ajoutée(s). Maximum ${MAX_PHOTOS} photos.`
+    toastColor.value = 'warning'
+    showToast.value = true
+  }
+  
+  // Ajouter les fichiers
+  selectedPhotos.value.push(...filesToAdd)
+  
+  // Créer les URLs de prévisualisation
+  filesToAdd.forEach(file => {
+    photoPreviewUrls.value.push(URL.createObjectURL(file))
+  })
+  
+  // Réinitialiser l'input pour permettre de re-sélectionner le même fichier
+  input.value = ''
+}
+
+const removePhoto = (index: number) => {
+  // Révoquer l'URL blob pour libérer la mémoire
+  URL.revokeObjectURL(photoPreviewUrls.value[index])
+  
+  // Supprimer la photo et son aperçu
+  selectedPhotos.value.splice(index, 1)
+  photoPreviewUrls.value.splice(index, 1)
 }
 
 const submitSignalement = async () => {
@@ -406,14 +571,55 @@ const submitSignalement = async () => {
 
   isLoading.value = true
   try {
-    await signalementStore.create({
+    // 1. Créer le signalement
+    const result = await signalementStore.create({
       titre: newSignalement.value.titre,
       description: newSignalement.value.description || undefined,
       latitude: selectedMapPoint.value!.lat,
       longitude: selectedMapPoint.value!.lng
     })
 
-    toastMessage.value = 'Signalement créé avec succès !'
+    if (!result.success || !result.signalement) {
+      throw new Error(result.message || 'Erreur lors de la création')
+    }
+
+    const signalementId = result.signalement.id
+
+    // 2. Upload des photos si présentes
+    if (selectedPhotos.value.length > 0) {
+      uploadProgress.value = {
+        isUploading: true,
+        currentFile: 0,
+        totalFiles: selectedPhotos.value.length,
+        percentage: 0
+      }
+
+      try {
+        await userPhotosService.uploadPhotosForSignalement(
+          selectedPhotos.value,
+          signalementId,
+          (fileIndex, progress) => {
+            uploadProgress.value.currentFile = fileIndex + 1
+            uploadProgress.value.percentage = Math.round(
+              ((fileIndex * 100) + progress.percentage) / selectedPhotos.value.length
+            )
+          }
+        )
+        
+        toastMessage.value = `Signalement créé avec ${selectedPhotos.value.length} photo(s) !`
+      } catch (photoError: any) {
+        console.error('Erreur upload photos:', photoError)
+        toastMessage.value = `Signalement créé, mais erreur upload photos: ${photoError.message}`
+        toastColor.value = 'warning'
+        showToast.value = true
+        closeCreateModal()
+        await refreshSignalements()
+        return
+      }
+    } else {
+      toastMessage.value = 'Signalement créé avec succès !'
+    }
+
     toastColor.value = 'success'
     showToast.value = true
     closeCreateModal()
@@ -424,12 +630,19 @@ const submitSignalement = async () => {
     showToast.value = true
   } finally {
     isLoading.value = false
+    uploadProgress.value.isUploading = false
   }
 }
 
 const closeDetailModal = () => {
   showDetailModal.value = false
   selectedSignalement.value = null
+  detailPhotos.value = []
+  loadingDetailPhotos.value = false
+}
+
+const openPhotoFullscreen = (url: string) => {
+  window.open(url, '_blank')
 }
 
 // Lifecycle
@@ -440,7 +653,7 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
-
+  
   // Initialize map after a small delay to ensure container is mounted
   setTimeout(() => {
     initMap()
@@ -525,17 +738,9 @@ watch(() => filter.value, () => {
   margin-top: 4px;
 }
 
-.text-primary {
-  color: var(--ion-color-primary);
-}
-
-.text-warning {
-  color: var(--ion-color-warning);
-}
-
-.text-success {
-  color: var(--ion-color-success);
-}
+.text-primary { color: var(--ion-color-primary); }
+.text-warning { color: var(--ion-color-warning); }
+.text-success { color: var(--ion-color-success); }
 
 .card-header {
   display: flex;
@@ -577,6 +782,97 @@ watch(() => filter.value, () => {
   margin: 0 0 16px;
   font-weight: bold;
   color: #fff;
+}
+
+/* Styles pour l'upload de photos */
+.photo-upload-card {
+  margin: 16px 0;
+}
+
+.photo-preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.photo-preview-item {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.photo-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-photo-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  --padding-start: 0;
+  --padding-end: 0;
+  width: 24px;
+  height: 24px;
+  z-index: 10;
+}
+
+.upload-progress {
+  margin-top: 12px;
+}
+
+.upload-progress p {
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Styles pour la galerie de photos dans le modal de détails */
+.photos-card {
+  margin: 16px 0;
+}
+
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.photo-gallery-item {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.photo-gallery-item:active {
+  transform: scale(0.95);
+}
+
+.photo-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photos-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #888;
+}
+
+.photos-loading p {
+  margin-top: 8px;
+  font-size: 14px;
 }
 </style>
 

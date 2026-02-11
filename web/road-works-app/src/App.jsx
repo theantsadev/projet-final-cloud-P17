@@ -7,7 +7,6 @@ import MainLayout from './layouts/MainLayout'
 
 // Auth Views
 import LoginPage from './pages/auth/LoginPage'
-import RegisterPage from './pages/auth/RegisterPage'
 
 // Dashboard Views
 import VisitorDashboard from './pages/dashboards/VisitorDashboard'
@@ -15,6 +14,18 @@ import ManagerDashboard from './pages/dashboards/ManagerDashboard'
 
 // Details Views
 import SignalementDetailsPage from './pages/SignalementDetailsPage'
+
+// Photos View
+import PhotosPage from './pages/PhotosPage'
+
+// Delai Moyen View
+import DelaiMoyenTraitementPage from './pages/dashboards/DelaiMoyenTraitementPage'
+
+// Type Reparation View
+import TypeReparationsPage from './pages/dashboards/TypeReparationsPage'
+
+// User Management View
+import UserRegisterPage from './pages/manager/UserRegisterPage'
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -63,7 +74,6 @@ function App() {
         </PublicRoute>
       }>
         <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
       </Route>
 
       {/* Visitor Dashboard - accessible to everyone (no authentication required) */}
@@ -79,6 +89,10 @@ function App() {
       }>
         <Route index element={<ManagerDashboard />} />
         <Route path="signalements/:id" element={<SignalementDetailsPage />} />
+        <Route path="photos" element={<PhotosPage />} />
+        <Route path="delai-moyen-traitement" element={<DelaiMoyenTraitementPage />} />
+        <Route path="type-reparations" element={<TypeReparationsPage />} />
+        <Route path="users/create" element={<UserRegisterPage />} />
       </Route>
 
       {/* Default redirects */}

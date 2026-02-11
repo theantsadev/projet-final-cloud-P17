@@ -1,0 +1,1032 @@
+{
+  "info": {
+    "name": "Travaux Routiers API",
+    "description": "Collection Postman pour l'API de signalement des travaux routiers - Antananarivo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Authentification et gestion utilisateur",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Test User\",\n  \"role\": \"visitor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager@test.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nouveau Nom\",\n  \"phone\": \"0341234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your-refresh-token-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Unlock Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"locked@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/unlock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "unlock"]
+            }
+          }
+        },
+        {
+          "name": "Firebase Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/firebase/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "firebase", "status"]
+            }
+          }
+        },
+        {
+          "name": "Restart Firebase Listeners",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/firebase/restart-listeners",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "firebase", "restart-listeners"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Gestion des utilisateurs",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get Locked Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/locked",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "locked"]
+            }
+          }
+        },
+        {
+          "name": "Get User Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":userId"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "user-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:userId/unlock",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":userId", "unlock"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "user-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"manager\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:userId/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", ":userId", "role"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "user-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sync Users Push (Firebase)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/sync/push-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "sync", "push-all"]
+            }
+          }
+        },
+        {
+          "name": "Sync Users Pull (Firebase)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/sync/pull-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "sync", "pull-all"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Sync Users Push",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/test/sync-firebase-push",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "test", "sync-firebase-push"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Sync Users Pull",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/test/sync-firebase-pull",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "test", "sync-firebase-pull"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Signalements",
+      "description": "Gestion des signalements de travaux routiers",
+      "item": [
+        {
+          "name": "Get All Signalements",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements"]
+            }
+          }
+        },
+        {
+          "name": "Get Signalement by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "signalement-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Signalements by Statut",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/statut/:statut",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "statut", ":statut"],
+              "variable": [
+                {
+                  "key": "statut",
+                  "value": "NOUVEAU"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Signalements by Geo Bounds",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/geo/bounds?minLat=-19.0&maxLat=-18.5&minLon=47.0&maxLon=48.0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "geo", "bounds"],
+              "query": [
+                {"key": "minLat", "value": "-19.0"},
+                {"key": "maxLat", "value": "-18.5"},
+                {"key": "minLon", "value": "47.0"},
+                {"key": "maxLon", "value": "48.0"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Signalements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/utilisateur/mes-signalements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "utilisateur", "mes-signalements"]
+            }
+          }
+        },
+        {
+          "name": "Create Signalement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"Nid-de-poule rue Analakely\",\n  \"description\": \"Grand trou dangereux pour les vehicules\",\n  \"latitude\": -18.8792,\n  \"longitude\": 47.5079,\n  \"surfaceM2\": 25.5,\n  \"niveau\": 5,\n  \"entrepriseConcernee\": \"Constructo SA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements"]
+            }
+          }
+        },
+        {
+          "name": "Update Signalement",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"Nid-de-poule rue Analakely - URGENT\",\n  \"description\": \"Grand trou dangereux - travaux en cours\",\n  \"latitude\": -18.8792,\n  \"longitude\": 47.5079,\n  \"surfaceM2\": 30,\n  \"niveau\": 7,\n  \"entrepriseConcernee\": \"Constructo SA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "signalement-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Signalement Statut",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/:id/statut?statut=EN_COURS",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", ":id", "statut"],
+              "query": [
+                {"key": "statut", "value": "EN_COURS"}
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "signalement-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Signalement",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "signalement-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stats Recap",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/stats/recap",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "stats", "recap"]
+            }
+          }
+        },
+        {
+          "name": "Get Delai Moyen Traitement",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/stats/delai-moyen-traitement",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "stats", "delai-moyen-traitement"]
+            }
+          }
+        },
+        {
+          "name": "Sync Push All (Firebase)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/sync/push-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "sync", "push-all"]
+            }
+          }
+        },
+        {
+          "name": "Sync Pull All (Firebase)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/sync/pull-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "sync", "pull-all"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Create Signalement",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/test/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "test", "create"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Create with User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-id-here\",\n  \"titre\": \"Test signalement\",\n  \"description\": \"Description test\",\n  \"latitude\": -18.8792,\n  \"longitude\": 47.5079,\n  \"surfaceM2\": \"25.5\",\n  \"niveau\": \"5\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/test/create-with-user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "test", "create-with-user"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Get All",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/test/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "test", "all"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Sync Push Firebase",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/test/sync-firebase-push",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "test", "sync-firebase-push"]
+            }
+          }
+        },
+        {
+          "name": "TEST - Sync Pull Firebase",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/signalements/test/sync-firebase-pull",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signalements", "test", "sync-firebase-pull"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Statuts",
+      "description": "Gestion des statuts d'avancement",
+      "item": [
+        {
+          "name": "Get All Statuts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/statuts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "statuts"]
+            }
+          }
+        },
+        {
+          "name": "Get Statut by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/statuts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "statuts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "statut-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Statut by Label",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/statuts/search/:statut",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "statuts", "search", ":statut"],
+              "variable": [
+                {
+                  "key": "statut",
+                  "value": "NOUVEAU"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Statut",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/statuts?statut=NOUVEAU_STATUT&avancement=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "statuts"],
+              "query": [
+                {"key": "statut", "value": "NOUVEAU_STATUT"},
+                {"key": "avancement", "value": "50"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Statut",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/statuts/:id?statut=MODIFIED&avancement=75",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "statuts", ":id"],
+              "query": [
+                {"key": "statut", "value": "MODIFIED"},
+                {"key": "avancement", "value": "75"}
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "statut-id-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Type Reparations",
+      "description": "Gestion des types de reparation et prix global",
+      "item": [
+        {
+          "name": "Get Prix Global",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/type-reparations/prix-global",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "type-reparations", "prix-global"]
+            }
+          }
+        },
+        {
+          "name": "Set Prix Global",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prixM2Global\": 50000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/type-reparations/prix-global",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "type-reparations", "prix-global"]
+            }
+          }
+        },
+        {
+          "name": "Get All Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/type-reparations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "type-reparations"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/type-reparations/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "type-reparations", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Type by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/type-reparations/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "type-reparations", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "type-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Type Reparation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Reparation majeure\",\n  \"description\": \"Reparation complete de la chaussee\",\n  \"niveau\": 8\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/type-reparations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "type-reparations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "Gestion des notifications",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread"]
+            }
+          }
+        },
+        {
+          "name": "Count Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/count/unread",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "count", "unread"]
+            }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", ":id", "read"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "notification-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "notification-id-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

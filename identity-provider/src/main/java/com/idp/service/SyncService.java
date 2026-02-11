@@ -14,7 +14,9 @@ import com.idp.repository.UserRepository;
 import com.idp.repository.UserSessionRepository;
 import com.idp.repository.LoginAttemptRepository;
 import com.idp.repository.SecuritySettingRepository;
+import com.idp.repository.RoleRepository;
 import com.idp.util.EncryptionUtil;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +48,9 @@ public class SyncService {
     private final UserSessionRepository sessionRepository;
     private final LoginAttemptRepository loginAttemptRepository;
     private final SecuritySettingRepository securitySettingRepository;
+    private final RoleRepository roleRepository;
     private final EncryptionUtil encryptionUtil;
+    private final PasswordEncoder passwordEncoder;
 
     // Pour gérer les listeners Firestore
     private ListenerRegistration userListener;
@@ -174,6 +178,24 @@ public class SyncService {
                 user.setCreatedAt(LocalDateTime.now());
             }
 
+            // Compléter les champs obligatoires si nouvel utilisateur
+            if (!userOpt.isPresent()) {
+                // Mot de passe par défaut (à changer côté web si besoin)
+                String defaultPassword = "changeme123";
+                if (user.getPasswordHash() == null) {
+                    user.setPasswordHash(passwordEncoder.encode(defaultPassword));
+                }
+                if (user.getEncryptedPassword() == null) {
+                    user.setEncryptedPassword(encryptionUtil.encrypt(defaultPassword));
+                }
+                // Rôle par défaut : USER
+                if (user.getRole() == null) {
+                    var defaultRole = roleRepository.findByNom("USER")
+                        .orElseThrow(() -> new RuntimeException("Rôle USER non trouvé"));
+                    user.setRole(defaultRole);
+                }
+            }
+
             // METTRE À JOUR TOUS LES CHAMPS depuis Firestore
 
             // 1. Informations personnelles
@@ -237,6 +259,9 @@ public class SyncService {
             user.setSyncStatus("SYNCED");
             user.setUpdatedAt(LocalDateTime.now());
 
+            // Log avant save pour debug
+            log.info("User à sauvegarder: {}", user);
+
             // Sauvegarder
             userRepository.save(user);
 
@@ -247,6 +272,37 @@ public class SyncService {
             if (e.getCause() != null) {
                 log.error("Cause: {}", e.getCause().getMessage());
             }
+        }
+    }
+
+    /**
+     * Tirer TOUS les utilisateurs depuis Firestore vers PostgreSQL
+     * @return le nombre d'utilisateurs synchronisés
+     */
+    @Transactional
+    public int pullAllUsersFromFirestore() {
+        log.info("📥 PULL ALL - Récupération de tous les utilisateurs depuis Firestore...");
+
+        if (!isOnline()) {
+            log.warn("❌ Firebase hors ligne - Impossible de récupérer les utilisateurs");
+            return 0;
+        }
+
+        try {
+            ApiFuture<QuerySnapshot> future = firestore.collection(FIRESTORE_USERS_COLLECTION).get();
+            QuerySnapshot querySnapshot = future.get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            int count = 0;
+            for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                syncUserFromFirestoreToPostgres(document);
+                count++;
+            }
+
+            log.info("✅ PULL ALL terminé - {} utilisateurs synchronisés depuis Firestore", count);
+            return count;
+        } catch (Exception e) {
+            log.error("❌ Erreur PULL ALL depuis Firestore: {}", e.getMessage());
+            return 0;
         }
     }
 
